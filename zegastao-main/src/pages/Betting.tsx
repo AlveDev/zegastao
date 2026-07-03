@@ -37,8 +37,20 @@ export function Betting() {
   const [targetMultiplier, setTargetMultiplier] = useState(25);
   const [tool, setTool] = useState<'none' | 'guru'>('none');
   const [tab, setTab] = useState<'raid' | 'history'>('raid');
-  const [extractedSlip, setExtractedSlip] = useState<ExtractedSlip | null>(null);
+  const SLIP_KEY = 'ze_slip_v1';
+  const [extractedSlip, setExtractedSlip] = useState<ExtractedSlip | null>(() => {
+    try {
+      const raw = sessionStorage.getItem('ze_slip_v1');
+      return raw ? (JSON.parse(raw) as ExtractedSlip) : null;
+    } catch { return null; }
+  });
   const cardRef = useRef<HTMLDivElement>(null);
+
+  function setSlip(slip: ExtractedSlip | null) {
+    if (slip) sessionStorage.setItem(SLIP_KEY, JSON.stringify(slip));
+    else sessionStorage.removeItem(SLIP_KEY);
+    setExtractedSlip(slip);
+  }
 
   const loadCycle = useCallback(async () => {
     setLoading(true);
@@ -125,6 +137,7 @@ export function Betting() {
       } else if (res.data.card?.skip) {
         setNoBetMsg(res.data.card.reasoning || 'Não achei uma aposta que valha a pena aqui. Prefiro não sugerir do que sugerir aposta ruim.');
       }
+      setSlip(null); // jogo analisado — limpa sessão persistida
       await loadCycle();
       // Rola suavemente para o card de análise após sucesso.
       setTimeout(() => cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
@@ -272,7 +285,7 @@ export function Betting() {
                   </p>
                 </div>
 
-                <UploadOdds onExtracted={(slip) => setExtractedSlip(slip)} />
+                <UploadOdds onExtracted={(slip) => setSlip(slip)} />
 
                 {extractedSlip?.homeTeam && (
                   <div className="flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 px-3 py-2">
@@ -333,7 +346,7 @@ export function Betting() {
       message={noBetMsg}
       gameLabel={extractedSlip?.homeTeam ? `${extractedSlip.homeTeam} x ${extractedSlip.awayTeam}` : undefined}
       onClose={() => setNoBetMsg('')}
-      onTryAnother={() => { setNoBetMsg(''); setExtractedSlip(null); }}
+      onTryAnother={() => { setNoBetMsg(''); setSlip(null); }}
     />
     </>
   );

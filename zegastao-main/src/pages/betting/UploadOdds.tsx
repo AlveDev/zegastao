@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { httpsCallable } from 'firebase/functions';
-import { collection, query, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, limit, where, getDocsFromServer, Timestamp } from 'firebase/firestore';
 import { functionsUsEast, db } from '@/firebase';
 import { prepareImage, tryOcr } from '@/lib/imagePrep';
 import { Camera, FolderOpen, PlusCircle, Loader2, Sparkles, CheckCircle2, Users, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
@@ -101,16 +101,23 @@ export function UploadOdds({ onExtracted }: Props) {
   const fetchCommunity = useCallback(async () => {
     setLoadingComm(true);
     try {
-      const snap = await getDocs(
-        query(collection(db, 'betting_cache'), orderBy('fetchedAt', 'desc'), limit(10))
+      const cutoff = Timestamp.fromMillis(Date.now() - 4 * 60 * 60 * 1000);
+      // Server-side time filter + getDocsFromServer ignores offline cache
+      const snap = await getDocsFromServer(
+        query(
+          collection(db, 'betting_cache'),
+          where('fetchedAt', '>', cutoff),
+          orderBy('fetchedAt', 'desc'),
+          limit(10)
+        )
       );
-      const cutoff = Date.now() - 4 * 60 * 60 * 1000; // 4h — descarta extrações velhas/incorretas
       setCommunity(
         snap.docs
           .map((d) => ({ id: d.id, ...d.data() } as CachedGame))
           .filter((g) => {
             if (!g.payload?.homeTeam || !g.payload?.awayTeam) return false;
-            if (g.fetchedAt?.toMillis() < cutoff) return false;
+            // Guard against missing fetchedAt (shouldn't happen after server filter, but safe)
+            if (!g.fetchedAt || g.fetchedAt.toMillis() < cutoff.toMillis()) return false;
             // Nomes truncados pelo OCR começam com minúscula (ex: "ósnia" em vez de "Bósnia")
             const startsUpper = (s: string) => s.length > 0 && s[0] === s[0].toUpperCase() && s[0] !== s[0].toLowerCase();
             return startsUpper(g.payload.homeTeam) && startsUpper(g.payload.awayTeam);

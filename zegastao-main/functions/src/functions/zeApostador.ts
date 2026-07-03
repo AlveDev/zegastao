@@ -187,37 +187,46 @@ function slipToOddsEvent(fix: PrintFixtureInput): OddsEvent {
 
 async function generateCardAnalysis(
   leg: { homeTeam: string; awayTeam: string; selection: string; marketOdd: number; modelProb: number; ev: number; league: string },
-  ctx: { formSummary: string; h2hSummary: string; statsSummary: string },
+  ctx: { formSummary: string; h2hSummary: string; statsSummary: string; contextSummary?: string },
 ): Promise<string> {
-  const hasCtx = ctx.formSummary || ctx.h2hSummary || ctx.statsSummary;
+  const hasCtx = ctx.formSummary || ctx.h2hSummary || ctx.statsSummary || ctx.contextSummary;
   if (!hasCtx) return '';
   const modelPct = Math.round(leg.modelProb * 100);
-  const evPct = Math.round(leg.ev * 100);
-  const sign = evPct >= 0 ? '+' : '';
   const sections = [
     ctx.formSummary ? `FORMA RECENTE:\n${ctx.formSummary}` : '',
     ctx.h2hSummary ? `HISTÓRICO H2H:\n${ctx.h2hSummary}` : '',
     ctx.statsSummary ? `ESTATÍSTICAS:\n${ctx.statsSummary}` : '',
+    ctx.contextSummary ? `CONTEXTO DO JOGO:\n${ctx.contextSummary}` : '',
   ].filter(Boolean).join('\n\n');
 
   const prompt = `Jogo: ${leg.homeTeam} x ${leg.awayTeam} (${leg.league})
-Aposta escolhida: ${leg.selection} | Odd: ${leg.marketOdd.toFixed(2)} | Nossa previsão: ${modelPct}% de chance | Margem: ${sign}${evPct}%
+Aposta recomendada: ${leg.selection} | Odd: ${leg.marketOdd.toFixed(2)} | Nossa previsão: ${modelPct}% de chance
 
+[DADOS DOS AGENTES]
 ${sections}
 
-Explique em 2-3 parágrafos curtos (máx 180 palavras, português simples) POR QUE escolhemos essa aposta:
-1. O que a forma recente e o H2H dizem sobre esse confronto
-2. O principal risco que poderia invalidar a escolha
-3. Uma frase final honesta
+Crie um relatório de análise em 4 seções curtas, usando exatamente este formato:
 
-Sem jargão técnico. Fala direta com o apostador comum.`;
+📊 MOMENTO DOS TIMES
+[2-3 frases sobre a forma recente de cada time — resultados concretos dos últimos jogos]
+
+⚔️ HISTÓRICO DIRETO
+[2 frases sobre os confrontos anteriores entre eles — quem ganhou mais, padrão de gols]
+
+📈 OS NÚMEROS DIZEM
+[2 frases sobre estatísticas relevantes, desfalques ou fatores importantes do jogo]
+
+🎯 POR QUE APOSTAMOS NISSO
+[3 frases diretas explicando a lógica da aposta escolhida e o principal risco]
+
+Máx 280 palavras. Português coloquial e direto. Sem jargão técnico. Sem prometer resultado. Concreto e específico — cite nomes de times, resultados reais, números concretos quando disponíveis.`;
 
   const client = new Anthropic();
   const response = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 400,
+    max_tokens: 900,
     messages: [{ role: 'user', content: prompt }],
-    system: 'Você é o Zé Apostador: analista honesto e direto que fala com apostadores comuns em português brasileiro.',
+    system: 'Você é o Zé Apostador: analista de futebol honesto que explica apostas como um especialista fala com apostadores comuns. Seja específico, use dados reais, evite generalidades.',
   });
   return response.content[0].type === 'text' ? response.content[0].text.trim() : '';
 }
@@ -333,14 +342,22 @@ async function buildRoundForCycle(
   const plan = buildRound(allCands, { riskLevel, targetMultiplier });
   const card = composeCard(plan, { authLevel: riskLevel, bankroll: cycle.currentBankroll });
 
-  // Análise qualitativa: enriquece o card com a síntese dos sub-agentes (form, h2h, stats).
+  // Análise qualitativa: enriquece o card com a síntese dos sub-agentes (form, h2h, stats, context).
   // Só disponível no fluxo print-first (Copa/internacionais) onde os agentes são chamados.
   if (!card.skip && plan.legs.length > 0 && (agentFormSummary || agentH2HSummary || agentStatsSummary)) {
     const leg = plan.legs[0];
+    const contextSummary = printMatchCtx?.summary || '';
+    // Armazena outputs brutos para exibição estruturada no frontend
+    card.agentOutputs = {
+      form: agentFormSummary || undefined,
+      h2h: agentH2HSummary || undefined,
+      stats: agentStatsSummary || undefined,
+      context: contextSummary || undefined,
+    };
     try {
       card.finalAnalysis = await generateCardAnalysis(
         { homeTeam: leg.homeTeam, awayTeam: leg.awayTeam, selection: leg.selection, marketOdd: leg.marketOdd, modelProb: leg.modelProb, ev: leg.ev, league: leg.league },
-        { formSummary: agentFormSummary, h2hSummary: agentH2HSummary, statsSummary: agentStatsSummary },
+        { formSummary: agentFormSummary, h2hSummary: agentH2HSummary, statsSummary: agentStatsSummary, contextSummary },
       );
     } catch { /* não interrompe o fluxo */ }
   }

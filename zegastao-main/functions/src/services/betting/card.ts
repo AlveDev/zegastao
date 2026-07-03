@@ -35,6 +35,12 @@ export interface GuidedCard {
   seal?: string;
   reasoning: string;
   finalAnalysis?: string; // análise qualitativa gerada pelos sub-agentes (form, h2h, stats)
+  agentOutputs?: {         // outputs brutos dos agentes para exibição no frontend
+    form?: string;
+    h2h?: string;
+    stats?: string;
+    context?: string;    // matchContext: lesões, árbitro, importância do jogo
+  };
   steps: string[];
   suggestedStake: number;
   potentialReturn: number; // lucro líquido potencial

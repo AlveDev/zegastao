@@ -180,6 +180,7 @@ export interface ZeGuidedCard {
   seal?: string;
   reasoning: string;
   finalAnalysis?: string;
+  agentOutputs?: { form?: string; h2h?: string; stats?: string; context?: string; };
   steps: string[];
   suggestedStake: number;
   potentialReturn: number;
@@ -200,6 +201,7 @@ export interface ZeRound {
   outcome: 'pending' | 'won' | 'lost';
   skip: boolean;
   reasonCode: string;
+  crossOver?: string | null;
   stake?: number;
   payout?: number;
 }

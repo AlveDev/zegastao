@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn, formatBRL } from '@/lib/utils';
 import { ZeRound } from '@/types';
 import { ShareableBetCard } from './ShareableBetCard';
-import { AlertTriangle, Info, TrendingUp, TrendingDown, CheckCircle2, XCircle, Trophy, Frown, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Info, TrendingUp, TrendingDown, CheckCircle2, XCircle, Trophy, Frown, ShieldAlert, ChevronDown } from 'lucide-react';
 
 const zeRecalcCard = httpsCallable<unknown, RecalcResponse>(functionsUsEast, 'zeRecalcCard');
 const zeFeedback = httpsCallable<unknown, { success: boolean; bankroll: number; cycleStatus?: string }>(functionsUsEast, 'zeFeedback');
@@ -38,6 +38,19 @@ const STATUS_STYLE: Record<string, { icon: typeof TrendingUp; cls: string }> = {
   lost: { icon: XCircle, cls: 'text-red-400 border-red-500/30 bg-red-500/10' },
 };
 
+function AgentSection({ label, text }: { label: string; text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-lg border border-border/40 bg-card/40 overflow-hidden">
+      <button onClick={() => setOpen(v => !v)} className="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors">
+        <span>{label}</span>
+        <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && <p className="px-2.5 pb-2 text-[11px] leading-relaxed text-foreground/70 whitespace-pre-line border-t border-border/30 pt-1.5">{text}</p>}
+    </div>
+  );
+}
+
 export function GuidedBetCard({ cycleId, round, referralCode, onUpdated }: Props) {
   const card = round.card;
   const [odds, setOdds] = useState<Record<string, string>>(
@@ -46,6 +59,7 @@ export function GuidedBetCard({ cycleId, round, referralCode, onUpdated }: Props
   const [recalc, setRecalc] = useState<RecalcResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [sealAccepted, setSealAccepted] = useState(!card.needsSeal);
+  const [showReport, setShowReport] = useState(false);
   const [placed, setPlaced] = useState(round.placed);
   const [result, setResult] = useState<'won' | 'lost' | null>(round.outcome === 'pending' ? null : round.outcome);
   const [payout, setPayout] = useState('');
@@ -126,7 +140,7 @@ export function GuidedBetCard({ cycleId, round, referralCode, onUpdated }: Props
             @{card.combinedOdd}
           </span>
         </div>
-        <p className="text-xs text-muted-foreground">Chance de acertar: {card.combinedProbPct}% · {card.evPct > 0 ? `Vantagem: +${card.evPct}%` : `A casa leva: ${Math.abs(card.evPct)}%`}</p>
+        <p className="text-xs text-muted-foreground">Chance de acertar: {card.combinedProbPct}% · {card.evPct > 0 ? 'Odds com vantagem favorável' : 'Melhor opção disponível hoje'}</p>
       </div>
 
       <div className="space-y-4 p-4">
@@ -143,11 +157,24 @@ export function GuidedBetCard({ cycleId, round, referralCode, onUpdated }: Props
           <Info className={cn('mt-0.5 h-4 w-4 shrink-0', isMarginal ? 'text-amber-400' : 'text-green-400')} /> {card.reasoning}
         </div>
 
-        {/* Análise detalhada dos sub-agentes (form, h2h, stats) */}
-        {card.finalAnalysis && (
-          <div className="rounded-xl border border-border/50 bg-secondary/20 p-3">
-            <p className="mb-1.5 text-xs font-semibold text-muted-foreground">📊 Por que o Zé escolheu essa aposta</p>
-            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/80">{card.finalAnalysis}</p>
+        {/* Análise detalhada dos sub-agentes (form, h2h, stats, context) */}
+        {(card.finalAnalysis || card.agentOutputs) && (
+          <div className="rounded-xl border border-border/50 bg-secondary/20 overflow-hidden">
+            <button onClick={() => setShowReport(v => !v)} className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
+              <span>📊 Ver análise completa do Zé</span>
+              <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showReport && 'rotate-180')} />
+            </button>
+            {showReport && (
+              <div className="px-3 pb-3 space-y-2 border-t border-border/30">
+                {card.finalAnalysis && (
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/80 pt-2">{card.finalAnalysis}</p>
+                )}
+                {card.agentOutputs?.form && <AgentSection label="📋 Forma Recente" text={card.agentOutputs.form} />}
+                {card.agentOutputs?.h2h && <AgentSection label="⚔️ Histórico H2H" text={card.agentOutputs.h2h} />}
+                {card.agentOutputs?.stats && <AgentSection label="📈 Estatísticas" text={card.agentOutputs.stats} />}
+                {card.agentOutputs?.context && <AgentSection label="🏟️ Contexto" text={card.agentOutputs.context} />}
+              </div>
+            )}
           </div>
         )}
 
@@ -211,6 +238,13 @@ export function GuidedBetCard({ cycleId, round, referralCode, onUpdated }: Props
             <Button onClick={recalcNow} loading={loading} variant="outline" className="w-full border-border text-foreground/90">
               Conferir odds na Betano e recalcular
             </Button>
+
+            {/* Trava financeira do Zé Gastão */}
+            {round.crossOver && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /> {round.crossOver}
+              </div>
+            )}
 
             {/* Stake + retorno */}
             <div className="flex items-center justify-between rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3">

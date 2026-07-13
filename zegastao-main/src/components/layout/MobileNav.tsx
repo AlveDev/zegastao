@@ -12,6 +12,8 @@ import {
   CreditCard,
   Package,
   Home,
+  Trophy,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ActionSheet } from '@/components/ActionSheet';
@@ -83,6 +85,20 @@ export function MobileNav() {
       description: isClassic ? 'Seus ativos e itens' : 'Itens para vender → missões',
       onClick: () => navigate('/inventario'),
     },
+    ...(isClassic ? [
+      {
+        icon: <Trophy className="h-5 w-5" />,
+        label: 'Metas e Progresso',
+        description: 'Seu plano e conquistas',
+        onClick: () => navigate('/journey'),
+      },
+      {
+        icon: <Users className="h-5 w-5" />,
+        label: 'Comunidade',
+        description: 'Amigos, ranking e mercado',
+        onClick: () => navigate('/vila'),
+      },
+    ] : []),
   ];
 
   return (

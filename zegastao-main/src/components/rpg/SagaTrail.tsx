@@ -1,18 +1,22 @@
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Circle, Lock, Scroll, Infinity as InfinityIcon } from 'lucide-react';
+import { CheckCircle2, Circle, Lock, Scroll, Target, Infinity as InfinityIcon } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useDebts } from '@/hooks/useDebts';
 import { useCaixinhas } from '@/hooks/useCaixinhas';
 import { useInvestments, useMilestones } from '@/hooks/useJourney';
+import { useUIMode } from '@/hooks/useUIMode';
 import { cn } from '@/lib/utils';
 import {
   resolveSaga, ENDLESS_GOALS, PHASE_ORDER,
+  chapterIcon, chapterTitle, chapterSubtitle, chapterReward, missionLabel,
+  endlessGoalTitle, endlessGoalDesc,
   type ResolvedChapter, type SagaContext,
 } from '@/lib/rpg/saga';
 import { PHASE_LABELS } from '@/types';
 
 function ChapterCard({ ch }: { ch: ResolvedChapter }) {
+  const { isClassic } = useUIMode();
   const locked = ch.status === 'locked';
   const current = ch.status === 'current';
   const done = ch.status === 'done';
@@ -33,12 +37,12 @@ function ChapterCard({ ch }: { ch: ResolvedChapter }) {
           'h-11 w-11 shrink-0 rounded-xl flex items-center justify-center text-2xl',
           locked ? 'bg-secondary grayscale' : 'bg-background'
         )}>
-          {locked ? <Lock className="h-5 w-5 text-muted-foreground" /> : ch.icon}
+          {locked ? <Lock className="h-5 w-5 text-muted-foreground" /> : chapterIcon(ch, isClassic)}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Capítulo {ch.index} · {PHASE_LABELS[ch.phase]}
+              {isClassic ? 'Etapa' : 'Capítulo'} {ch.index} · {PHASE_LABELS[ch.phase]}
             </p>
             {current && (
               <span className="text-[9px] font-bold uppercase tracking-wide text-gold">◆ Atual</span>
@@ -50,8 +54,8 @@ function ChapterCard({ ch }: { ch: ResolvedChapter }) {
               <span className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">🔒 Bloqueado</span>
             )}
           </div>
-          <h3 className="font-display font-bold text-foreground leading-tight mt-0.5">{ch.title}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">{ch.subtitle}</p>
+          <h3 className="font-display font-bold text-foreground leading-tight mt-0.5">{chapterTitle(ch, isClassic)}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">{chapterSubtitle(ch, isClassic)}</p>
         </div>
       </div>
 
@@ -67,7 +71,7 @@ function ChapterCard({ ch }: { ch: ResolvedChapter }) {
                 'text-sm flex-1 min-w-0',
                 m.done ? 'text-muted-foreground line-through' : 'text-foreground'
               )}>
-                {m.label}
+                {missionLabel(m, isClassic)}
               </span>
               {current && !m.done && m.cta && (
                 <Link
@@ -97,7 +101,7 @@ function ChapterCard({ ch }: { ch: ResolvedChapter }) {
           </div>
           <p className="mt-2 flex items-start gap-1.5 text-[11px] text-gold/90">
             <span>🎁</span>
-            <span className="text-muted-foreground"><span className="font-semibold text-gold">Ao concluir:</span> {ch.reward}</span>
+            <span className="text-muted-foreground"><span className="font-semibold text-gold">Ao concluir:</span> {chapterReward(ch, isClassic)}</span>
           </p>
         </div>
       )}
@@ -106,6 +110,7 @@ function ChapterCard({ ch }: { ch: ResolvedChapter }) {
 }
 
 export function SagaTrail() {
+  const { isClassic } = useUIMode();
   const profile = useStore((s) => s.profile);
   const { data: accounts } = useAccounts();
   const { data: debts } = useDebts();
@@ -132,11 +137,15 @@ export function SagaTrail() {
       <div className="rpg-panel rounded-2xl p-4">
         <div className="flex items-center gap-3">
           <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center">
-            <Scroll className="h-5 w-5 text-gold" />
+            {isClassic ? <Target className="h-5 w-5 text-gold" /> : <Scroll className="h-5 w-5 text-gold" />}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-display text-lg font-bold text-foreground leading-tight">A Saga Financeira</h2>
-            <p className="text-xs text-muted-foreground">Do vermelho à liberdade — um capítulo de cada vez.</p>
+            <h2 className="font-display text-lg font-bold text-foreground leading-tight">
+              {isClassic ? 'Seu Roteiro Financeiro' : 'A Saga Financeira'}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {isClassic ? 'Do vermelho à liberdade — uma etapa de cada vez.' : 'Do vermelho à liberdade — um capítulo de cada vez.'}
+            </p>
           </div>
           <div className="text-right shrink-0">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Progresso</p>
@@ -160,21 +169,27 @@ export function SagaTrail() {
       )}>
         <div className="flex items-center gap-2 mb-1">
           <InfinityIcon className="h-4 w-4 text-gold" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pós-jornada · ∞</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {isClassic ? 'Modo Contínuo · ∞' : 'Pós-jornada · ∞'}
+          </p>
         </div>
-        <h3 className="font-display font-bold text-foreground">Sem Fim</h3>
+        <h3 className="font-display font-bold text-foreground">{isClassic ? 'Sem Parar' : 'Sem Fim'}</h3>
         <p className="text-xs text-muted-foreground">
-          {reachedEndless
-            ? 'A história principal acabou — agora é manter a lenda viva.'
-            : 'Conclua a Saga para desbloquear os desafios infinitos de manutenção.'}
+          {isClassic
+            ? (reachedEndless
+                ? 'O roteiro principal acabou — agora é manter o hábito.'
+                : 'Conclua o roteiro para desbloquear os objetivos contínuos de manutenção.')
+            : (reachedEndless
+                ? 'A história principal acabou — agora é manter a lenda viva.'
+                : 'Conclua a Saga para desbloquear os desafios infinitos de manutenção.')}
         </p>
         <div className="grid grid-cols-1 gap-2 mt-3">
           {ENDLESS_GOALS.map((g) => (
             <div key={g.id} className="flex items-center gap-3 rounded-xl border border-border bg-background/40 p-2.5">
               <span className="text-xl shrink-0">{g.icon}</span>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground">{g.title}</p>
-                <p className="text-[11px] text-muted-foreground">{g.desc}</p>
+                <p className="text-sm font-semibold text-foreground">{endlessGoalTitle(g, isClassic)}</p>
+                <p className="text-[11px] text-muted-foreground">{endlessGoalDesc(g, isClassic)}</p>
               </div>
             </div>
           ))}

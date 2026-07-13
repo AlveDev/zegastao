@@ -6,12 +6,14 @@ import { db } from '@/firebase';
 import { useStore } from '@/store/useStore';
 import { Crown, Flame } from 'lucide-react';
 import { getAvatar, getClass } from '@/lib/rpg/character';
+import { useUIMode } from '@/hooks/useUIMode';
 import { cn } from '@/lib/utils';
 import type { LeaderboardEntry } from '@/lib/rpg/social';
 
 const RANK_BADGES = ['🥇', '🥈', '🥉'];
 
 function EntryRow({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
+  const { isClassic } = useUIMode();
   const avatar = getAvatar(entry.avatarId);
   const cls = getClass(entry.characterClass);
 
@@ -34,7 +36,7 @@ function EntryRow({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
           {entry.alias} {isMe && '(você)'}
         </p>
         <p className="text-[10px] text-muted-foreground">
-          {cls.emoji} {cls.name} · Lv {entry.level}
+          {isClassic ? `Nível ${entry.level}` : `${cls.emoji} ${cls.name} · Lv ${entry.level}`}
         </p>
       </div>
       <div className="text-right shrink-0">
@@ -49,6 +51,7 @@ function EntryRow({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
 }
 
 export function Leaderboard() {
+  const { isClassic } = useUIMode();
   const user = useStore((s) => s.user);
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +101,7 @@ export function Leaderboard() {
       <div className="flex items-center gap-2 mb-3">
         <Crown className="h-4 w-4 text-gold" />
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          Top Aventureiros da Semana
+          {isClassic ? 'Top da Semana' : 'Top Aventureiros da Semana'}
         </p>
       </div>
 

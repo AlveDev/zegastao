@@ -6,9 +6,11 @@ import { useStore } from '@/store/useStore';
 import { setProfile } from '@/lib/firestore';
 import { getSpecies } from '@/lib/rpg/character';
 import { getDailyRewardState, calcDailyXP, streakMessage } from '@/lib/rpg/dailyReward';
+import { useUIMode } from '@/hooks/useUIMode';
 import { cn } from '@/lib/utils';
 
 export function DailyRewardCard() {
+  const { isClassic } = useUIMode();
   const profile = useStore((s) => s.profile);
   const setProfileStore = useStore((s) => s.setProfile);
   const [checking, setChecking] = useState(false);
@@ -83,7 +85,9 @@ export function DailyRewardCard() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-display font-bold text-sm leading-tight">
-            {justChecked ? `${companionName} adorou! 🎉` : `Alimentar ${companionName}`}
+            {justChecked
+              ? `${companionName} adorou! 🎉`
+              : (isClassic ? `Check-in com ${companionName}` : `Alimentar ${companionName}`)}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {justChecked

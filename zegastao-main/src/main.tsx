@@ -4,10 +4,12 @@ import { BrowserRouter } from 'react-router-dom';
 import * as Sentry from '@sentry/react';
 import App from './App';
 import { initTheme } from './hooks/useTheme';
+import { initUIModeAttr } from './contexts/UIModeContext';
 import './index.css';
 
-// Aplica o tema antes de renderizar para evitar flash
+// Aplica o tema e o modo de UI antes de renderizar para evitar flash
 initTheme();
+initUIModeAttr();
 
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({

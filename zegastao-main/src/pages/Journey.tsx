@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Circle, Trophy, X, PartyPopper, Gift, Zap, Link as LinkIcon, Scroll, Map, Award, Swords, BookOpen, Star } from 'lucide-react';
+import { CheckCircle2, Circle, Trophy, X, PartyPopper, Gift, Zap, Link as LinkIcon, Scroll, Map, Award, Swords, Briefcase, BookOpen, Star, Target } from 'lucide-react';
 import { useStore } from '@/store/useStore';
+import { useUIMode } from '@/hooks/useUIMode';
 import { updateUserDoc } from '@/lib/firestore';
 import { useMilestones, useDailyTasks } from '@/hooks/useJourney';
 import { useDebts } from '@/hooks/useDebts';
@@ -44,6 +45,7 @@ function CelebrationModal({
   const milestoneName = milestoneInfo?.name || milestone.name || 'Conquista!';
   const emoji = MILESTONE_EMOJIS[milestone.id] || '🎯';
   const { referralUrl, share: shareReferral } = useReferral();
+  const { isClassic } = useUIMode();
   const [referred, setReferred] = useState(false);
 
   async function handleReferral() {
@@ -72,7 +74,7 @@ function CelebrationModal({
 
         <div className="mx-6 mb-4 mt-2 rounded-xl border border-primary/20 bg-primary/5 p-3 text-center">
           <p className="flex items-center justify-center gap-1.5 text-sm font-semibold">
-            <Gift className="h-4 w-4 text-primary" /> Chama um amigo pra essa jornada
+            <Gift className="h-4 w-4 text-primary" /> {isClassic ? 'Convide um amigo' : 'Chama um amigo pra essa jornada'}
           </p>
           <p className="mt-0.5 mb-2 text-xs text-muted-foreground">
             Indique alguém que precisa sair das dívidas — vocês dois ganham.
@@ -84,7 +86,7 @@ function CelebrationModal({
 
         <div className="px-6 pb-6">
           <Button variant="ghost" className="w-full" onClick={onClose}>
-            Continuar a aventura
+            {isClassic ? 'Continuar' : 'Continuar a aventura'}
           </Button>
         </div>
 
@@ -104,6 +106,7 @@ type JourneyTab = 'trilha' | 'cacada' | 'missoes' | 'skills' | 'conquistas';
 export function Journey() {
   const profile = useStore((s) => s.profile);
   const user = useStore((s) => s.user);
+  const { isClassic } = useUIMode();
   const milestones = useMilestones();
   const tasks = useDailyTasks();
   const { data: debts } = useDebts();
@@ -138,7 +141,13 @@ export function Journey() {
     }
   }
 
-  const TABS: { id: JourneyTab; label: string; icon: typeof Map }[] = [
+  const TABS: { id: JourneyTab; label: string; icon: typeof Map }[] = isClassic ? [
+    { id: 'trilha',    label: 'Roteiro',    icon: Map },
+    { id: 'cacada',   label: 'Renda Extra', icon: Briefcase },
+    { id: 'missoes',  label: 'Tarefas',    icon: Zap },
+    { id: 'skills',   label: 'Habilidades', icon: Star },
+    { id: 'conquistas', label: 'Conquistas', icon: Award },
+  ] : [
     { id: 'trilha',    label: 'Trilha',     icon: Map },
     { id: 'cacada',   label: 'Caçada',     icon: Swords },
     { id: 'missoes',  label: 'Missões',    icon: Zap },
@@ -154,7 +163,8 @@ export function Journey() {
 
       <div className="flex items-center justify-between">
         <h2 className="font-display text-lg font-bold flex items-center gap-2">
-          <Scroll className="h-5 w-5 text-gold" /> Jornada
+          {isClassic ? <Target className="h-5 w-5 text-primary" /> : <Scroll className="h-5 w-5 text-gold" />}
+          {isClassic ? 'Seu Progresso' : 'Jornada'}
         </h2>
         {phase && (
           <Badge variant="success" className="gap-1">
@@ -193,7 +203,9 @@ export function Journey() {
           <div className="rounded-2xl border bg-card p-3 flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
             <p className="text-xs text-muted-foreground">
-              Conclua missões de renda extra. Seu poder aumenta com o nível de Freelancer.
+              {isClassic
+                ? 'Conclua tarefas de renda extra. Seu ganho potencial aumenta conforme você evolui.'
+                : 'Conclua missões de renda extra. Seu poder aumenta com o nível de Freelancer.'}
             </p>
           </div>
           <HuntBoard />
@@ -207,7 +219,9 @@ export function Journey() {
           {topDebt && (
             <div className="rounded-2xl border bg-card p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">🎯 Boss em Foco</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {isClassic ? '🎯 Dívida Prioritária' : '🎯 Boss em Foco'}
+                </p>
                 <Badge variant="destructive" className="text-[10px]">
                   {formatPct(topDebt.interestRateMonthly * 100, 1)} a.m.
                 </Badge>
@@ -235,21 +249,23 @@ export function Journey() {
           {/* Missões de hoje */}
           <div>
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-amber-500" /> Missões de hoje
+              <Zap className="h-3.5 w-3.5 text-amber-500" /> {isClassic ? 'Tarefas de hoje' : 'Missões de hoje'}
             </h3>
             {tasks.length === 0 ? (
               <div className="rounded-xl border bg-card p-5 text-center space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Suas missões personalizadas aparecem aqui após o processamento noturno (00:00).
+                  {isClassic
+                    ? 'Suas tarefas personalizadas aparecem aqui após o processamento noturno (00:00).'
+                    : 'Suas missões personalizadas aparecem aqui após o processamento noturno (00:00).'}
                 </p>
                 {incomeTaskSuggestions.length > 0 && (
                   <p className="text-xs text-primary">
-                    Enquanto isso, veja bounties na aba{' '}
+                    {isClassic ? 'Enquanto isso, veja oportunidades na aba' : 'Enquanto isso, veja bounties na aba'}{' '}
                     <button
                       onClick={() => setTab('cacada')}
                       className="underline font-medium"
                     >
-                      Caçada
+                      {isClassic ? 'Renda Extra' : 'Caçada'}
                     </button>
                   </p>
                 )}
@@ -268,7 +284,7 @@ export function Journey() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                  💰 Bounty Board
+                  {isClassic ? '💰 Oportunidades de Renda Extra' : '💰 Bounty Board'}
                 </h3>
                 <button
                   onClick={() => setTab('cacada')}

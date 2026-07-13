@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { XP_EVENTS } from '@/lib/xp';
+import { useUIMode } from '@/hooks/useUIMode';
 import type { DailyTask } from '@/types';
 
 interface QuestCardProps {
@@ -10,9 +11,9 @@ interface QuestCardProps {
 }
 
 const DIFFICULTY_CONFIG = {
-  easy:   { label: 'Fácil',   color: 'emerald', xp: XP_EVENTS.task_easy,   icon: '🌿', badgeClass: 'bg-green-500/20 text-green-400 border-green-500/30' },
-  medium: { label: 'Médio',   color: 'amber',   xp: XP_EVENTS.task_medium, icon: '⚔️', badgeClass: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
-  hard:   { label: 'Difícil', color: 'red',     xp: XP_EVENTS.task_hard,   icon: '🔥', badgeClass: 'bg-red-500/20 text-red-400 border-red-500/30' },
+  easy:   { label: 'Fácil',   color: 'emerald', xp: XP_EVENTS.task_easy,   icon: '🌿', iconClassic: '🌿', badgeClass: 'bg-green-500/20 text-green-400 border-green-500/30' },
+  medium: { label: 'Médio',   color: 'amber',   xp: XP_EVENTS.task_medium, icon: '⚔️', iconClassic: '⚡', badgeClass: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+  hard:   { label: 'Difícil', color: 'red',     xp: XP_EVENTS.task_hard,   icon: '🔥', iconClassic: '🔥', badgeClass: 'bg-red-500/20 text-red-400 border-red-500/30' },
 };
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -23,6 +24,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 };
 
 export function QuestCard({ task, onComplete, completed = false, className }: QuestCardProps) {
+  const { isClassic } = useUIMode();
   const diff = DIFFICULTY_CONFIG[task.difficulty] ?? DIFFICULTY_CONFIG.medium;
 
   return (
@@ -45,7 +47,7 @@ export function QuestCard({ task, onComplete, completed = false, className }: Qu
               'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border',
               diff.badgeClass
             )}>
-              {diff.icon} {diff.label}
+              {isClassic ? diff.iconClassic : diff.icon} {diff.label}
             </span>
             {task.estimatedTime && (
               <span className="text-[10px] text-muted-foreground">⏱ {task.estimatedTime}</span>
@@ -79,14 +81,14 @@ export function QuestCard({ task, onComplete, completed = false, className }: Qu
           onClick={onComplete}
           className="w-full rounded-lg py-2 px-4 bg-primary/10 hover:bg-primary/20 active:scale-95 transition-all text-primary text-sm font-semibold border border-primary/20"
         >
-          ✅ Missão Concluída
+          {isClassic ? '✅ Tarefa Concluída' : '✅ Missão Concluída'}
         </button>
       )}
 
       {completed && (
         <div className="flex items-center gap-2 text-xs text-green-500 font-medium pl-12">
           <span>✅</span>
-          <span>Missão concluída · +{diff.xp} XP ganhos</span>
+          <span>{isClassic ? 'Tarefa concluída' : 'Missão concluída'} · +{diff.xp} XP ganhos</span>
         </div>
       )}
     </div>

@@ -3,7 +3,7 @@
 // aliados, ranking e desbloqueio de companions extras.
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Package, ShoppingBag, MapPin,
+  Package, ShoppingBag, MapPin, Users, TrendingUp, Crown,
   Infinity as InfinityIcon, Lock, X,
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
@@ -15,6 +15,7 @@ import { Leaderboard } from '@/components/rpg/Leaderboard';
 import { FarmPanel } from '@/components/rpg/FarmPanel';
 import { getSpecies } from '@/lib/rpg/character';
 import { levelFromXP } from '@/lib/xp';
+import { useUIMode } from '@/hooks/useUIMode';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
@@ -31,6 +32,7 @@ const COMPANION_UNLOCKS: { speciesId: string; requiredCaixinhas: number; label: 
 ];
 
 function CompanionUnlockPanel() {
+  const { isClassic } = useUIMode();
   const profile = useStore((s) => s.profile);
   const setStoreProfile = useStore((s) => s.setProfile);
   const xp = profile?.xp ?? 0;
@@ -51,11 +53,13 @@ function CompanionUnlockPanel() {
       <div className="px-4 py-3 border-b flex items-center gap-2">
         <span className="text-xl">🥚</span>
         <div>
-          <p className="font-display font-bold text-sm">Companions</p>
+          <p className="font-display font-bold text-sm">{isClassic ? 'Parceiros' : 'Companions'}</p>
           <p className="text-xs text-muted-foreground">Toque para equipar — desbloqueie concluindo metas</p>
         </div>
         <div className="ml-auto">
-          <p className="text-xs font-bold text-gold">{xp.toLocaleString('pt-BR')} XP · Lv {level}</p>
+          <p className="text-xs font-bold text-gold">
+            {xp.toLocaleString('pt-BR')} XP · {isClassic ? `Nível ${level}` : `Lv ${level}`}
+          </p>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2 p-3">
@@ -169,11 +173,38 @@ function FeiranteDialogue({ onClose }: { onClose: () => void }) {
 
 // Hub da Vila — NPCs e locais
 function VilaHub() {
+  const { isClassic } = useUIMode();
+  const navigate = useNavigate();
   const milestones = useMilestones();
   const achievedCount = milestones.length;
   const [feiranteOpen, setFeiranteOpen] = useState(false);
 
-  const NPCS = [
+  const NPCS = isClassic ? [
+    {
+      id: 'sabio',
+      emoji: '💬',
+      name: 'Copiloto IA',
+      desc: 'Conselheiro de finanças com IA. Sempre disponível.',
+      to: '/copilot',
+      cta: 'Falar com o Copiloto',
+    },
+    {
+      id: 'cofre',
+      emoji: '🐷',
+      name: 'Caixinhas',
+      desc: 'Acompanhe suas metas de poupança.',
+      to: '/caixinha',
+      cta: 'Ver Caixinhas',
+    },
+    {
+      id: 'quest',
+      emoji: '🎯',
+      name: 'Metas e Progresso',
+      desc: 'Seu roteiro, tarefas de renda extra e conquistas.',
+      to: '/journey',
+      cta: 'Ver Progresso',
+    },
+  ] : [
     {
       id: 'sabio',
       emoji: '🧙',
@@ -205,10 +236,16 @@ function VilaHub() {
       {/* Banner da Vila */}
       <div className="rpg-panel rounded-2xl p-4">
         <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center text-2xl">🏘️</div>
+          <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center text-2xl">
+            {isClassic ? '👥' : '🏘️'}
+          </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-display text-lg font-bold text-foreground leading-tight">A Vila</h2>
-            <p className="text-xs text-muted-foreground">Centro da comunidade de aventureiros.</p>
+            <h2 className="font-display text-lg font-bold text-foreground leading-tight">
+              {isClassic ? 'Comunidade' : 'A Vila'}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {isClassic ? 'Amigos, ranking e mercado da comunidade.' : 'Centro da comunidade de aventureiros.'}
+            </p>
           </div>
           <div className="text-right shrink-0">
             <p className="text-[10px] text-muted-foreground">Conquistas</p>
@@ -220,23 +257,27 @@ function VilaHub() {
       {/* Check-in diário */}
       <DailyRewardCard />
 
-      {/* NPCs */}
+      {/* NPCs / Menu de locais */}
       <div>
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5">
-          <MapPin className="h-3.5 w-3.5" /> Locais da Vila
+          <MapPin className="h-3.5 w-3.5" /> {isClassic ? 'Atalhos' : 'Locais da Vila'}
         </p>
         <div className="grid grid-cols-2 gap-2">
-          {/* Feirante — interactive dialogue NPC */}
+          {/* Feirante — diálogo NPC no RPG; atalho direto no Clássico */}
           <button
-            onClick={() => setFeiranteOpen(true)}
+            onClick={() => isClassic ? navigate('/mercado') : setFeiranteOpen(true)}
             className="rounded-xl border bg-card p-3 flex flex-col gap-2 hover:border-amber-500/30 hover:bg-amber-500/5 transition-all active:scale-95 text-left"
           >
-            <span className="text-3xl">🪙</span>
+            <span className="text-3xl">🛒</span>
             <div>
-              <p className="font-bold text-sm">Feirante</p>
-              <p className="text-[11px] text-muted-foreground leading-snug">Mercado P2P da Guilda — compra, venda, negocie.</p>
+              <p className="font-bold text-sm">{isClassic ? 'Mercado' : 'Feirante'}</p>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                {isClassic ? 'Compre e venda itens com a comunidade.' : 'Mercado P2P da Guilda — compra, venda, negocie.'}
+              </p>
             </div>
-            <span className="text-[10px] font-bold text-amber-500">Falar com Feirante →</span>
+            <span className="text-[10px] font-bold text-amber-500">
+              {isClassic ? 'Ver mercado →' : 'Falar com Feirante →'}
+            </span>
           </button>
 
           {NPCS.map((npc) => (
@@ -266,21 +307,27 @@ function VilaHub() {
       >
         <ShoppingBag className="h-8 w-8 text-gold shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="font-display font-bold text-sm">Mercado da Guilda</p>
+          <p className="font-display font-bold text-sm">{isClassic ? 'Mercado da Comunidade' : 'Mercado da Guilda'}</p>
           <p className="text-xs text-muted-foreground">Itens à venda pela comunidade</p>
         </div>
         <span className="text-gold font-bold text-sm shrink-0">→</span>
       </Link>
 
-      {feiranteOpen && <FeiranteDialogue onClose={() => setFeiranteOpen(false)} />}
+      {!isClassic && feiranteOpen && <FeiranteDialogue onClose={() => setFeiranteOpen(false)} />}
     </div>
   );
 }
 
 export function Vila() {
+  const { isClassic } = useUIMode();
   const [tab, setTab] = useState<VilaTab>('vila');
 
-  const TABS: { id: VilaTab; label: string; icon: typeof MapPin }[] = [
+  const TABS: { id: VilaTab; label: string; icon: typeof MapPin }[] = isClassic ? [
+    { id: 'vila',    label: 'Início',        icon: MapPin },
+    { id: 'fazenda', label: 'Investimentos', icon: TrendingUp },
+    { id: 'aliados', label: 'Amigos',        icon: Users },
+    { id: 'ranking', label: 'Ranking',       icon: Crown },
+  ] : [
     { id: 'vila',    label: 'Vila',    icon: MapPin },
     { id: 'fazenda', label: 'Fazenda', icon: ShoppingBag },
     { id: 'aliados', label: 'Aliados', icon: Package },
@@ -291,7 +338,7 @@ export function Vila() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-lg font-bold flex items-center gap-2">
-          🏘️ A Vila
+          {isClassic ? '👥 Comunidade' : '🏘️ A Vila'}
         </h2>
       </div>
 

@@ -93,18 +93,16 @@ import { Vila } from '@/pages/Vila';
 import { Mercado } from '@/pages/Mercado';
 import { AdminRoute } from '@/components/AdminRoute';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { useUIMode } from '@/hooks/useUIMode';
-
-function RPGRoute({ element }: { element: JSX.Element }) {
-  const { isClassic } = useUIMode();
-  return isClassic ? <Navigate to="/dashboard" replace /> : element;
-}
+import { UIModeProvider } from '@/contexts/UIModeContext';
+import { ModeSwitchOverlay } from '@/components/ModeSwitchOverlay';
 
 export default function App() {
   useAuthListener();
 
   return (
+    <UIModeProvider>
     <ToastProvider>
+      <ModeSwitchOverlay />
       <PWAInstallBanner />
       <Routes>
         {/* Páginas públicas */}
@@ -135,7 +133,7 @@ export default function App() {
           <Route path="/financas" element={<Navigate to="/carteira" replace />} />
           <Route path="/transactions" element={<ErrorBoundary><Transactions /></ErrorBoundary>} />
           <Route path="/copilot" element={<ErrorBoundary><Copilot /></ErrorBoundary>} />
-          <Route path="/journey" element={<RPGRoute element={<ErrorBoundary><Journey /></ErrorBoundary>} />} />
+          <Route path="/journey" element={<ErrorBoundary><Journey /></ErrorBoundary>} />
 
           {/* Rotas legadas → redirects para nova arquitetura */}
           <Route path="/debts" element={<Navigate to="/carteira" replace />} />
@@ -152,11 +150,12 @@ export default function App() {
           <Route path="/caixinha" element={<ErrorBoundary><Caixinha /></ErrorBoundary>} />
           <Route path="/inventario" element={<ErrorBoundary><Inventory /></ErrorBoundary>} />
           <Route path="/mercado" element={<ErrorBoundary><Mercado /></ErrorBoundary>} />
-          <Route path="/vila" element={<RPGRoute element={<ErrorBoundary><Vila /></ErrorBoundary>} />} />
+          <Route path="/vila" element={<ErrorBoundary><Vila /></ErrorBoundary>} />
           {FEATURES.ZE_APOSTADOR && <Route path="/apostas" element={<ErrorBoundary><Betting /></ErrorBoundary>} />}
         </Route>
       </Routes>
       <CookieConsent />
     </ToastProvider>
+    </UIModeProvider>
   );
 }

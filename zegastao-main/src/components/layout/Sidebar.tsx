@@ -48,6 +48,8 @@ export function Sidebar() {
     { to: '/carteira', label: 'Carteira', sub: 'Contas, dívidas e metas', icon: CreditCard },
     { to: '/transactions', label: 'Transações', sub: 'Histórico e extratos', icon: Receipt },
     { to: '/copilot', label: 'Copiloto IA', sub: 'Análise e conselho', icon: MessageCircle },
+    { to: '/journey', label: 'Metas e Progresso', sub: 'Seu plano e conquistas', icon: Trophy },
+    { to: '/vila', label: 'Comunidade', sub: 'Amigos, ranking e mercado', icon: Users },
   ] : [
     { to: '/dashboard', label: 'Castelo', sub: 'Visão geral do reino', icon: LayoutDashboard, end: true },
     { to: '/carteira', label: 'Arsenal', sub: 'Contas, bosses, dívidas', icon: CreditCard },

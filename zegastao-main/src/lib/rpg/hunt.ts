@@ -9,39 +9,51 @@ export type HuntTier = 'T1' | 'T2' | 'T3';
 
 export const TIER_CONFIG: Record<HuntTier, {
   label: string;
+  labelClassic: string;
   emoji: string;
+  emojiClassic: string;
   xp: number;
   difficulty: IncomeTask['difficulty'];
   color: string;
   bg: string;
   desc: string;
+  descClassic: string;
 }> = {
   T1: {
     label: 'Explorador',
+    labelClassic: 'Iniciante',
     emoji: '🗡️',
+    emojiClassic: '🌱',
     xp: 10,
     difficulty: 'easy',
     color: 'text-primary',
     bg: 'bg-primary/10 border-primary/20',
     desc: 'Missões rápidas, baixo risco. Ideal para começar.',
+    descClassic: 'Tarefas rápidas, baixo risco. Ideal para começar.',
   },
   T2: {
     label: 'Caçador',
+    labelClassic: 'Intermediário',
     emoji: '⚔️',
+    emojiClassic: '💼',
     xp: 25,
     difficulty: 'medium',
     color: 'text-gold',
     bg: 'bg-gold/10 border-gold/20',
     desc: 'Missões medianas com retorno maior.',
+    descClassic: 'Tarefas medianas com retorno maior.',
   },
   T3: {
     label: 'Lendário',
+    labelClassic: 'Avançado',
     emoji: '🏹',
+    emojiClassic: '🚀',
     xp: 50,
     difficulty: 'hard',
     color: 'text-boss',
     bg: 'bg-boss/10 border-boss/20',
     desc: 'Alta recompensa, exige mais tempo e esforço.',
+    descClassic: 'Alta recompensa, exige mais tempo e esforço.',
   },
 };
 

@@ -2,8 +2,13 @@
 import { Lock, CheckCircle2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { professionLevel, PROFESSION_LABELS, PROFESSION_ICONS, type Profession } from '@/lib/xp';
-import { getSkillsForProfession, isSkillUnlocked } from '@/lib/rpg/skills';
+import { getSkillsForProfession, isSkillUnlocked, skillName, skillDesc } from '@/lib/rpg/skills';
+import { useUIMode } from '@/hooks/useUIMode';
 import { cn } from '@/lib/utils';
+
+const PROFESSION_ICONS_CLASSIC: Partial<Record<Profession, string>> = {
+  quitador: '💳',
+};
 
 const PROFESSIONS: Profession[] = ['poupador', 'quitador', 'freelancer', 'investidor'];
 
@@ -22,6 +27,7 @@ const PROFESSION_HEADER: Record<Profession, string> = {
 };
 
 export function SkillTree() {
+  const { isClassic } = useUIMode();
   const profile = useStore((s) => s.profile);
   const profXP = (profile?.professionXP ?? {}) as Record<string, number>;
 
@@ -37,13 +43,13 @@ export function SkillTree() {
           <div key={prof} className="rounded-2xl border overflow-hidden">
             {/* Header */}
             <div className={cn('flex items-center gap-3 px-4 py-3', PROFESSION_HEADER[prof])}>
-              <span className="text-xl">{PROFESSION_ICONS[prof]}</span>
+              <span className="text-xl">{isClassic ? (PROFESSION_ICONS_CLASSIC[prof] ?? PROFESSION_ICONS[prof]) : PROFESSION_ICONS[prof]}</span>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-sm">{PROFESSION_LABELS[prof]}</p>
-                <p className="text-xs text-muted-foreground">Lv {level} · {xp} XP</p>
+                <p className="text-xs text-muted-foreground">{isClassic ? `Nível ${level}` : `Lv ${level}`} · {xp} XP</p>
               </div>
               <div className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold border', PROFESSION_ACCENT[prof])}>
-                {unlocked}/{skills.length} skills
+                {unlocked}/{skills.length} {isClassic ? 'habilidades' : 'skills'}
               </div>
             </div>
 
@@ -77,15 +83,15 @@ export function SkillTree() {
                         'text-sm font-semibold',
                         unlocked ? 'text-foreground' : 'text-muted-foreground'
                       )}>
-                        {skill.name}
+                        {skillName(skill, isClassic)}
                       </p>
-                      <p className="text-[11px] text-muted-foreground">{skill.desc}</p>
+                      <p className="text-[11px] text-muted-foreground">{skillDesc(skill, isClassic)}</p>
                     </div>
                     {unlocked
                       ? <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                       : (
                         <span className="text-[10px] text-muted-foreground shrink-0 whitespace-nowrap">
-                          Lv {skill.unlockLevel}
+                          {isClassic ? `Nível ${skill.unlockLevel}` : `Lv ${skill.unlockLevel}`}
                         </span>
                       )
                     }

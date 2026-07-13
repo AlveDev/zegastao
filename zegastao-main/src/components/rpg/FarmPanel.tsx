@@ -3,6 +3,7 @@
 import { TrendingUp, Coins } from 'lucide-react';
 import { useInvestments } from '@/hooks/useJourney';
 import { useAccounts } from '@/hooks/useAccounts';
+import { useUIMode } from '@/hooks/useUIMode';
 import { formatBRL, cn } from '@/lib/utils';
 import type { Investment } from '@/types';
 import type { Account } from '@/types';
@@ -42,6 +43,7 @@ const ACCOUNT_EMOJIS: Record<string, string> = {
 };
 
 export function FarmPanel() {
+  const { isClassic } = useUIMode();
   const { data: investments } = useInvestments();
   const { data: accounts } = useAccounts();
 
@@ -64,10 +66,12 @@ export function FarmPanel() {
       {/* Cabeçalho da Fazenda */}
       <div className="rpg-panel rounded-2xl p-4">
         <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center text-2xl">🌾</div>
+          <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center text-2xl">{isClassic ? '💰' : '🌾'}</div>
           <div className="flex-1 min-w-0">
-            <p className="font-display font-bold text-foreground">A Fazenda do Ouro</p>
-            <p className="text-xs text-muted-foreground">Seus empregados trabalhando 24h por dia</p>
+            <p className="font-display font-bold text-foreground">{isClassic ? 'Investimentos e Poupança' : 'A Fazenda do Ouro'}</p>
+            <p className="text-xs text-muted-foreground">
+              {isClassic ? 'Seu dinheiro rendendo automaticamente' : 'Seus empregados trabalhando 24h por dia'}
+            </p>
           </div>
           <div className="text-right shrink-0">
             <p className="text-[10px] text-muted-foreground">Renda passiva/mês</p>
@@ -80,7 +84,7 @@ export function FarmPanel() {
             <p className="font-bold text-sm">{formatBRL(totalPatrimony)}</p>
           </div>
           <div className="flex-1 rounded-xl bg-background/60 p-2.5 text-center">
-            <p className="text-[10px] text-muted-foreground">Empregados</p>
+            <p className="text-[10px] text-muted-foreground">{isClassic ? 'Ativos' : 'Empregados'}</p>
             <p className="font-bold text-sm">{investments.length + savingsAccounts.length}</p>
           </div>
           <div className="flex-1 rounded-xl bg-background/60 p-2.5 text-center">
@@ -97,9 +101,13 @@ export function FarmPanel() {
       {!hasAssets ? (
         <div className="rounded-xl border bg-card p-6 text-center space-y-2">
           <div className="text-3xl">🌱</div>
-          <p className="text-sm font-semibold">Sua fazenda ainda está vazia</p>
+          <p className="text-sm font-semibold">
+            {isClassic ? 'Você ainda não tem investimentos' : 'Sua fazenda ainda está vazia'}
+          </p>
           <p className="text-xs text-muted-foreground">
-            Registre investimentos ou contas de poupança para ver seus empregados trabalhando.
+            {isClassic
+              ? 'Registre investimentos ou contas de poupança para acompanhar o rendimento.'
+              : 'Registre investimentos ou contas de poupança para ver seus empregados trabalhando.'}
           </p>
         </div>
       ) : (
@@ -166,7 +174,9 @@ export function FarmPanel() {
       {hasAssets && totalMonthlyReturn > 0 && (
         <div className="rounded-xl border border-gold/20 bg-gold/5 p-3 text-center">
           <p className="text-xs text-muted-foreground">
-            🌾 Seus empregados geram <span className="font-bold text-gold">{formatBRL(totalMonthlyReturn)}</span> por mês enquanto você dorme.
+            {isClassic ? '💰' : '🌾'} {isClassic ? 'Seus investimentos geram' : 'Seus empregados geram'}{' '}
+            <span className="font-bold text-gold">{formatBRL(totalMonthlyReturn)}</span>{' '}
+            {isClassic ? 'por mês, de forma automática.' : 'por mês enquanto você dorme.'}
           </p>
         </div>
       )}

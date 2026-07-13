@@ -2,6 +2,7 @@
 // Milestones renderizados como cartas de criaturas capturadas.
 import { CheckCircle2, Lock } from 'lucide-react';
 import { useMilestones } from '@/hooks/useJourney';
+import { useUIMode } from '@/hooks/useUIMode';
 import { MILESTONE_ORDER } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -34,6 +35,7 @@ const MILESTONE_RARITY: Record<string, { label: string; color: string; bg: strin
 };
 
 export function Bestiary() {
+  const { isClassic } = useUIMode();
   const milestones = useMilestones();
   const achieved = new Set(milestones.map((m) => m.id));
   const capturedCount = MILESTONE_ORDER.filter((m) => achieved.has(m.id)).length;
@@ -42,10 +44,10 @@ export function Bestiary() {
     <div className="space-y-4">
       {/* Progresso do álbum */}
       <div className="rounded-2xl border bg-card p-4 flex items-center gap-3">
-        <div className="h-11 w-11 rounded-xl bg-gold/10 flex items-center justify-center text-2xl shrink-0">📖</div>
+        <div className="h-11 w-11 rounded-xl bg-gold/10 flex items-center justify-center text-2xl shrink-0">{isClassic ? '🏆' : '📖'}</div>
         <div className="flex-1 min-w-0">
-          <p className="font-display font-bold text-sm">Bestiário do Aventureiro</p>
-          <p className="text-xs text-muted-foreground">Criaturas financeiras capturadas</p>
+          <p className="font-display font-bold text-sm">{isClassic ? 'Suas Conquistas' : 'Bestiário do Aventureiro'}</p>
+          <p className="text-xs text-muted-foreground">{isClassic ? 'Marcos da sua jornada financeira' : 'Criaturas financeiras capturadas'}</p>
           <div className="h-1.5 rounded-full bg-secondary overflow-hidden mt-2">
             <div
               className="h-full rounded-full bg-gold transition-all"
@@ -55,7 +57,7 @@ export function Bestiary() {
         </div>
         <div className="text-right shrink-0">
           <p className="font-display font-bold text-gold">{capturedCount}/{MILESTONE_ORDER.length}</p>
-          <p className="text-[10px] text-muted-foreground">capturadas</p>
+          <p className="text-[10px] text-muted-foreground">{isClassic ? 'desbloqueadas' : 'capturadas'}</p>
         </div>
       </div>
 

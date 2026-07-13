@@ -6,6 +6,7 @@ import { Users, UserPlus, Copy } from 'lucide-react';
 import { useReferral } from '@/hooks/useReferral';
 import { useToast } from '@/components/ui/Toast';
 import { getAvatar, getClass } from '@/lib/rpg/character';
+import { useUIMode } from '@/hooks/useUIMode';
 import { cn } from '@/lib/utils';
 import type { SocialStats } from '@/lib/rpg/social';
 
@@ -14,6 +15,7 @@ import type { SocialStats } from '@/lib/rpg/social';
 const MOCK_FRIENDS: SocialStats[] = []; // será populado via Firestore quando amigos existirem
 
 export function FriendsPanel() {
+  const { isClassic } = useUIMode();
   const { referralUrl, share } = useReferral();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
@@ -37,10 +39,12 @@ export function FriendsPanel() {
       <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
         <div className="flex items-center gap-2">
           <UserPlus className="h-4 w-4 text-primary" />
-          <p className="font-semibold text-sm">Chame um Aliado</p>
+          <p className="font-semibold text-sm">{isClassic ? 'Convide um Amigo' : 'Chame um Aliado'}</p>
         </div>
         <p className="text-xs text-muted-foreground">
-          Indique um amigo para a aventura — ele recebe orientação e você sobe no ranking de aliados.
+          {isClassic
+            ? 'Indique um amigo — ele recebe orientação e você sobe no ranking de amigos.'
+            : 'Indique um amigo para a aventura — ele recebe orientação e você sobe no ranking de aliados.'}
         </p>
         {referralUrl && (
           <div className="flex items-center gap-2 rounded-lg bg-background border px-3 py-2">
@@ -65,7 +69,7 @@ export function FriendsPanel() {
               : 'bg-primary text-primary-foreground hover:bg-primary/90'
           )}
         >
-          {copied ? '✓ Link copiado!' : '⚔️ Convocar aliado'}
+          {copied ? '✓ Link copiado!' : (isClassic ? 'Convidar amigo' : '⚔️ Convocar aliado')}
         </button>
       </div>
 
@@ -74,16 +78,20 @@ export function FriendsPanel() {
         <div className="flex items-center gap-2 mb-3">
           <Users className="h-4 w-4 text-muted-foreground" />
           <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Meus Aliados
+            {isClassic ? 'Meus Amigos' : 'Meus Aliados'}
           </p>
         </div>
 
         {!hasFriends ? (
           <div className="rounded-xl border bg-card p-6 text-center space-y-2">
-            <div className="text-3xl">🏰</div>
-            <p className="text-sm font-semibold">Sua guilda está vazia</p>
+            <div className="text-3xl">{isClassic ? '👥' : '🏰'}</div>
+            <p className="text-sm font-semibold">
+              {isClassic ? 'Você ainda não tem amigos por aqui' : 'Sua guilda está vazia'}
+            </p>
             <p className="text-xs text-muted-foreground">
-              Convide amigos para a jornada. Quando eles entrarem pelo seu link, aparecem aqui.
+              {isClassic
+                ? 'Convide amigos. Quando eles entrarem pelo seu link, aparecem aqui.'
+                : 'Convide amigos para a jornada. Quando eles entrarem pelo seu link, aparecem aqui.'}
             </p>
           </div>
         ) : (
@@ -98,7 +106,9 @@ export function FriendsPanel() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm">{friend.alias}</p>
-                    <p className="text-xs text-muted-foreground">{cls.emoji} {cls.name} · Lv {friend.level}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {isClassic ? `Nível ${friend.level}` : `${cls.emoji} ${cls.name} · Lv ${friend.level}`}
+                    </p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-xs font-bold text-gold">{friend.xp} XP</p>

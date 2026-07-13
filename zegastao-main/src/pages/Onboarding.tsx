@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { track, Events } from '@/lib/analytics';
 import { CharacterCreation, type CharacterDraft } from '@/components/rpg/CharacterCreation';
 import { getSpecies } from '@/lib/rpg/character';
+import { useUIMode } from '@/hooks/useUIMode';
 import type { AccountType } from '@/types';
 
 const SKILL_CATEGORIES = [
@@ -78,7 +79,10 @@ interface OnboardingAccount {
 export function Onboarding() {
   const { user, profile, authLoading, setProfile: setStoreProfile } = useStore();
   const navigate = useNavigate();
-  const [step, setStep] = useState(0);
+  const { uiMode, setUIMode, isClassic } = useUIMode();
+  const [step, setStep] = useState(() =>
+    localStorage.getItem('ze-gastao-ui-mode') ? 0 : -1
+  );
   const [character, setCharacter] = useState<CharacterDraft>({
     name: profile?.name || '',
     classId: 'guardiao',
@@ -127,6 +131,10 @@ export function Onboarding() {
   async function finish() {
     setBusy(true);
     try {
+      const finalCompanionName = isClassic
+        ? 'Zagá'
+        : (character.companionName.trim() || getSpecies(character.companionSpeciesId)?.suggestedName || 'Fagulha');
+
       await setProfile({
         name,
         monthlyIncome: income,
@@ -135,12 +143,13 @@ export function Onboarding() {
         alreadyInvests: invest === 'skip' ? 'no_idea' : invest,
         riskProfile: 'conservative',
         onboardingDone: true,
-        // Personagem & companion
-        characterClass: character.classId,
-        avatarId: character.avatarId,
-        companionSpeciesId: character.companionSpeciesId,
-        companionName: character.companionName.trim() || getSpecies(character.companionSpeciesId)?.suggestedName || 'Fagulha',
-        tourDone: false,
+        uiMode: isClassic ? 'classic' : 'rpg',
+        // Personagem & companion — Classic usa defaults neutros
+        characterClass: isClassic ? 'guardiao' : character.classId,
+        avatarId: isClassic ? 'mage' : character.avatarId,
+        companionSpeciesId: isClassic ? 'dragon' : character.companionSpeciesId,
+        companionName: finalCompanionName,
+        tourDone: isClassic ? true : false,
       });
 
       // Salvar contas bancárias
@@ -167,10 +176,10 @@ export function Onboarding() {
         const today = new Date();
         const sixMonthsFromNow = new Date(today);
         sixMonthsFromNow.setDate(today.getDate() + 180);
-        const companionName = character.companionName.trim() || getSpecies(character.companionSpeciesId)?.suggestedName || 'Fagulha';
+        const speciesEmoji = getSpecies(isClassic ? 'dragon' : character.companionSpeciesId)?.emoji ?? '🐉';
         const caixinhaRef = await addUserDoc('caixinhas', {
-          name: character.companionGoalName.trim() || `Meta do ${companionName}`,
-          emoji: getSpecies(character.companionSpeciesId)?.emoji ?? '🐉',
+          name: character.companionGoalName.trim() || `Meta do ${finalCompanionName}`,
+          emoji: speciesEmoji,
           targetAmount: character.companionGoalAmount,
           targetDate: sixMonthsFromNow.toISOString().slice(0, 10),
           startDate: today.toISOString().slice(0, 10),
@@ -183,7 +192,21 @@ export function Onboarding() {
         await setProfile({ companionCaixinhaId });
       }
 
-      setStoreProfile({ ...profile, name, monthlyIncome: income, skills, investmentGoals: dreams, onboardingDone: true, setupWizardDone: false, characterClass: character.classId, avatarId: character.avatarId, companionSpeciesId: character.companionSpeciesId, companionName: character.companionName.trim() || getSpecies(character.companionSpeciesId)?.suggestedName || 'Fagulha', tourDone: false, ...(companionCaixinhaId ? { companionCaixinhaId } : {}) });
+      setStoreProfile({
+        ...profile,
+        name,
+        monthlyIncome: income,
+        skills,
+        investmentGoals: dreams,
+        onboardingDone: true,
+        setupWizardDone: false,
+        characterClass: isClassic ? 'guardiao' : character.classId,
+        avatarId: isClassic ? 'mage' : character.avatarId,
+        companionSpeciesId: isClassic ? 'dragon' : character.companionSpeciesId,
+        companionName: finalCompanionName,
+        tourDone: isClassic ? true : false,
+        ...(companionCaixinhaId ? { companionCaixinhaId } : {}),
+      });
       track(Events.ONBOARDING_COMPLETED, { skills: skills.length, dreams: dreams.length, accounts: accounts.length });
       if (user) registerForPushNotifications(user.uid).catch(() => {});
       navigate('/dashboard?welcome=1');
@@ -192,7 +215,14 @@ export function Onboarding() {
     }
   }
 
-  const STEPS = [
+  const STEPS = isClassic ? [
+    { label: 'Seu perfil', emoji: '👤' },
+    { label: 'Suas contas', emoji: '🏦' },
+    { label: 'Suas dívidas', emoji: '💳' },
+    { label: 'Habilidades', emoji: '💼' },
+    { label: 'Seus sonhos', emoji: '🎯' },
+    { label: 'Investimentos', emoji: '📈' },
+  ] : [
     { label: 'Aventureiro', emoji: '⚔️' },
     { label: 'Equipamentos', emoji: '🛡️' },
     { label: 'Inimigos', emoji: '☠️' },
@@ -201,7 +231,14 @@ export function Onboarding() {
     { label: 'Estilo', emoji: '📈' },
   ];
 
-  const STEP_TITLES = [
+  const STEP_TITLES = isClassic ? [
+    'Vamos começar! 👋',
+    'Suas contas bancárias 🏦',
+    'Suas dívidas atuais 💳',
+    'O que você sabe fazer 💼',
+    'O que você quer conquistar 🎯',
+    'Como você prefere investir 📈',
+  ] : [
     'Criação de Personagem ⚔️',
     'Seus Equipamentos 🛡️',
     'Seus Inimigos ☠️',
@@ -210,7 +247,14 @@ export function Onboarding() {
     'Estilo de Combate 📈',
   ];
 
-  const STEP_DESCRIPTIONS = [
+  const STEP_DESCRIPTIONS = isClassic ? [
+    'Informe seus dados básicos para personalizar sua experiência.',
+    'Cadastre suas contas para ver seu patrimônio total. Opcional.',
+    'Registre suas dívidas ativas. O sistema vai ajudar a criar um plano. Opcional.',
+    'Informe suas habilidades para encontrarmos oportunidades de renda extra.',
+    'Qual é o seu sonho financeiro? Isso vai guiar seus objetivos no app.',
+    'Como você lida com investimentos hoje?',
+  ] : [
     'Qual é o nome do seu aventureiro?',
     'Suas contas e armas financeiras (opcional)',
     'Os bosses que você precisa derrotar (opcional)',
@@ -218,6 +262,58 @@ export function Onboarding() {
     'Qual é o seu objetivo final nesta aventura?',
     'Como você prefere acumular ouro?',
   ];
+
+  if (step === -1) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 px-4 py-8 gap-8">
+        <Link to="/"><Logo size="sm" /></Link>
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">Bem-vindo ao Zé Gastão! 👋</h1>
+            <p className="text-muted-foreground text-sm">Como você quer organizar suas finanças?</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              onClick={() => { setUIMode('classic'); setStep(0); }}
+              className="flex flex-col items-start gap-3 rounded-2xl border-2 border-primary bg-primary/5 p-5 text-left transition-all hover:bg-primary/10 hover:shadow-md"
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="text-3xl">📊</span>
+                <span className="rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-bold text-primary-foreground">RECOMENDADO</span>
+              </div>
+              <div>
+                <p className="font-bold text-foreground text-base">Modo Clássico</p>
+                <p className="text-xs text-muted-foreground mt-1">Interface financeira simples e direta. Ideal para quem quer organizar sem complicar.</p>
+              </div>
+              <ul className="text-xs text-muted-foreground space-y-1 mt-1">
+                <li>✅ Controle de contas e dívidas</li>
+                <li>✅ Metas de poupança com mascote</li>
+                <li>✅ Copiloto IA financeiro</li>
+              </ul>
+            </button>
+            <button
+              onClick={() => { setUIMode('rpg'); setStep(0); }}
+              className="flex flex-col items-start gap-3 rounded-2xl border-2 border-border bg-secondary/30 p-5 text-left transition-all hover:bg-secondary/50 hover:border-primary/50 hover:shadow-md"
+            >
+              <span className="text-3xl">⚔️</span>
+              <div>
+                <p className="font-bold text-foreground text-base">Modo Aventureiro</p>
+                <p className="text-xs text-muted-foreground mt-1">RPG de finanças com personagem, dívidas como bosses e missões de renda extra.</p>
+              </div>
+              <ul className="text-xs text-muted-foreground space-y-1 mt-1">
+                <li>🗡️ Personagem com classes e XP</li>
+                <li>☠️ Dívidas viram Boss battles</li>
+                <li>📜 Missões e raid de poupança</li>
+              </ul>
+            </button>
+          </div>
+          <p className="text-center text-xs text-muted-foreground">
+            Você pode mudar o modo a qualquer momento nas configurações do Perfil.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 dark:from-primary/10 dark:via-background dark:to-primary/5 px-3 py-4 sm:p-4 gap-6">
@@ -265,36 +361,73 @@ export function Onboarding() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Step 0: Criação de personagem */}
+          {/* Step 0: Criação de personagem / Perfil clássico */}
           {step === 0 && (
-            <>
-              <div className="space-y-1">
-                <Label>Nome do seu aventureiro</Label>
-                <Input
-                  value={name}
-                  onChange={(e) => setCharacter({ ...character, name: e.target.value })}
-                  placeholder="Seu nome"
+            isClassic ? (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <Label>Seu nome</Label>
+                  <Input
+                    value={name}
+                    onChange={(e) => setCharacter({ ...character, name: e.target.value })}
+                    placeholder="Como gostaria de ser chamado?"
+                    autoFocus
+                  />
+                </div>
+                <CurrencyInput
+                  label="Renda mensal líquida (salário + extras)"
+                  value={income}
+                  onChange={setIncome}
                 />
+                <div className="rounded-xl border border-border/60 bg-secondary/20 p-3 space-y-2">
+                  <p className="text-xs font-semibold text-foreground/70">🎯 Primeira meta de poupança (opcional)</p>
+                  <Input
+                    value={character.companionGoalName}
+                    onChange={(e) => setCharacter({ ...character, companionGoalName: e.target.value })}
+                    placeholder="Ex: Reserva de emergência, Viagem..."
+                  />
+                  {character.companionGoalName && (
+                    <CurrencyInput
+                      label="Valor a guardar"
+                      value={character.companionGoalAmount}
+                      onChange={(v) => setCharacter({ ...character, companionGoalAmount: v })}
+                    />
+                  )}
+                </div>
+                <Button className="w-full" onClick={() => setStep(1)} disabled={!name || !income}>
+                  Continuar →
+                </Button>
               </div>
-
-              <CharacterCreation value={character} onChange={setCharacter} />
-
-              <CurrencyInput
-                label="Ouro mensal (renda líquida)"
-                value={income}
-                onChange={setIncome}
-              />
-              <Button className="w-full" onClick={() => setStep(1)} disabled={!name || !income}>
-                Continuar a aventura →
-              </Button>
-            </>
+            ) : (
+              <>
+                <div className="space-y-1">
+                  <Label>Nome do seu aventureiro</Label>
+                  <Input
+                    value={name}
+                    onChange={(e) => setCharacter({ ...character, name: e.target.value })}
+                    placeholder="Seu nome"
+                  />
+                </div>
+                <CharacterCreation value={character} onChange={setCharacter} />
+                <CurrencyInput
+                  label="Ouro mensal (renda líquida)"
+                  value={income}
+                  onChange={setIncome}
+                />
+                <Button className="w-full" onClick={() => setStep(1)} disabled={!name || !income}>
+                  Continuar a aventura →
+                </Button>
+              </>
+            )
           )}
 
           {/* Step 1: Contas bancárias */}
           {step === 1 && (
             <>
               <p className="text-sm text-muted-foreground">
-                Registre seus equipamentos (contas bancárias) para ver seu patrimônio total. 100% opcional.
+                {isClassic
+                  ? 'Registre suas contas bancárias para ver seu patrimônio total. 100% opcional.'
+                  : 'Registre seus equipamentos (contas bancárias) para ver seu patrimônio total. 100% opcional.'}
               </p>
 
               {/* Lista de contas adicionadas */}
@@ -380,7 +513,7 @@ export function Onboarding() {
           {step === 2 && (
             <>
               <div className="space-y-1">
-                <Label>Nome do inimigo (credor)</Label>
+                <Label>{isClassic ? 'Credor (quem você deve)' : 'Nome do inimigo (credor)'}</Label>
                 <Input value={debt.name} onChange={(e) => setDebt({ ...debt, name: e.target.value })} placeholder="Ex: Cartão Nubank" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -392,7 +525,11 @@ export function Onboarding() {
                 <span className="text-lg">📤</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-primary">Tem extrato do banco?</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Importe depois e o sistema detecta os bosses automaticamente.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isClassic
+                      ? 'Importe depois e o sistema identifica suas dívidas automaticamente.'
+                      : 'Importe depois e o sistema detecta os bosses automaticamente.'}
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -406,7 +543,9 @@ export function Onboarding() {
           {step === 3 && (
             <>
               <p className="text-sm text-muted-foreground">
-                Usamos isso para gerar bounties (missões de renda extra) sob medida. Selecione pelo menos 1.
+                {isClassic
+                  ? 'Usamos isso para encontrar oportunidades de renda extra sob medida. Selecione pelo menos 1.'
+                  : 'Usamos isso para gerar bounties (missões de renda extra) sob medida. Selecione pelo menos 1.'}
               </p>
               <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
                 {SKILL_CATEGORIES.map((cat) => (
@@ -479,7 +618,9 @@ export function Onboarding() {
                 ))}
               </div>
               <Button className="w-full" onClick={finish} disabled={busy}>
-                {busy ? 'Criando personagem…' : '⚔️ Criar Personagem e Entrar'}
+                {busy
+                  ? (isClassic ? 'Configurando...' : 'Criando personagem…')
+                  : (isClassic ? '✅ Começar a organizar →' : '⚔️ Criar Personagem e Entrar')}
               </Button>
             </>
           )}

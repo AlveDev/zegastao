@@ -16,11 +16,13 @@ import { DebtEditModal } from '@/components/flows/DebtEditModal';
 import { DebtSimulator } from '@/components/DebtSimulator';
 import { TransactionInstallmentGroups } from '@/components/TransactionInstallmentGroups';
 import { BossCard } from '@/components/BossCard';
+import { useUIMode } from '@/hooks/useUIMode';
 import type { Debt } from '@/types';
 
 export function Debts() {
   const { data: debts } = useDebts();
   const { toast } = useToast();
+  const { isClassic } = useUIMode();
   const alerts = useNegotiationAlerts();
   const [openScript, setOpenScript] = useState<string | null>(null);
   const [openWizard, setOpenWizard] = useState(false);
@@ -64,9 +66,9 @@ export function Debts() {
       batch.update(doc(db, 'users', uid, 'debts', d.id), patch);
       await batch.commit();
       if (newRem === 0) {
-        toast('🏆 Boss derrotado! Dívida quitada!');
+        toast(isClassic ? '🎉 Dívida quitada! Parabéns!' : '🏆 Boss derrotado! Dívida quitada!');
       } else {
-        toast('⚔️ Ataque registrado! +30 XP');
+        toast(isClassic ? '✅ Pagamento registrado! +30 XP' : '⚔️ Ataque registrado! +30 XP');
       }
     } catch {
       toast('Erro ao registrar', 'error');
@@ -84,18 +86,22 @@ export function Debts() {
 
   async function remove(id: string) {
     await deleteUserDoc('debts', id);
-    toast('Boss removido', 'info');
+    toast(isClassic ? 'Dívida removida' : 'Boss removido', 'info');
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">⚔️ Bosses Ativos</h2>
-          <p className="text-sm text-muted-foreground">HP total: {formatBRL(totalBalance)}</p>
+          <h2 className="text-lg font-semibold">
+            {isClassic ? '💳 Dívidas Ativas' : '⚔️ Bosses Ativos'}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {isClassic ? 'Total:' : 'HP total:'} {formatBRL(totalBalance)}
+          </p>
         </div>
         <Button size="sm" onClick={() => setOpenWizard(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Novo Boss
+          <Plus className="h-4 w-4 mr-1" /> {isClassic ? 'Nova Dívida' : 'Novo Boss'}
         </Button>
       </div>
 
@@ -130,7 +136,9 @@ export function Debts() {
       {ranked.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Nenhum boss ativo. Cadastre suas dívidas e o Sábio monta o plano de quitação. 🎯
+            {isClassic
+              ? 'Nenhuma dívida ativa. Cadastre suas dívidas e o Copiloto monta o plano de quitação. 🎯'
+              : 'Nenhum boss ativo. Cadastre suas dívidas e o Sábio monta o plano de quitação. 🎯'}
           </CardContent>
         </Card>
       )}
@@ -142,21 +150,22 @@ export function Debts() {
           <div key={d.id} className="space-y-2">
             {i === 0 && (
               <p className="text-[10px] font-bold uppercase tracking-wider text-red-500 flex items-center gap-1 px-1">
-                ☠️ Ataque este boss primeiro — juros mais altos
+                {isClassic ? '⚠️ Pague esta primeiro — juros mais altos' : '☠️ Ataque este boss primeiro — juros mais altos'}
               </p>
             )}
             <BossCard
               debt={d}
               onAttack={canAttack ? () => quickPayInstallment(d) : undefined}
+              variant={isClassic ? 'classic' : 'rpg'}
             />
             {paidThisMonth && (
               <div className="flex items-center gap-1.5 rounded-lg bg-green-500/5 border border-green-500/20 px-3 py-1.5 text-xs font-medium text-green-600 dark:text-green-400">
-                ✅ Ataque deste mês registrado — próximo round no mês que vem
+                {isClassic ? '✅ Pagamento deste mês registrado' : '✅ Ataque deste mês registrado — próximo round no mês que vem'}
               </div>
             )}
             {payingId === d.id && (
               <div className="flex items-center gap-1.5 rounded-lg bg-primary/5 border border-primary/20 px-3 py-1.5 text-xs text-muted-foreground">
-                ⚔️ Registrando ataque…
+                {isClassic ? '💳 Registrando pagamento…' : '⚔️ Registrando ataque…'}
               </div>
             )}
             <div className="flex items-center gap-3 px-1">
@@ -170,7 +179,7 @@ export function Debts() {
                 onClick={() => setSimulateDebt(d)}
                 className="flex items-center gap-1 text-xs text-amber-500 hover:text-amber-400 transition-colors"
               >
-                <Zap className="h-3.5 w-3.5" /> Simular ataque extra
+                <Zap className="h-3.5 w-3.5" /> {isClassic ? 'Simular pagamento extra' : 'Simular ataque extra'}
               </button>
               <button
                 onClick={() => remove(d.id)}

@@ -8,6 +8,7 @@ import {
 import { CharacterPanel } from '@/components/CharacterPanel';
 import { CompanionWidget } from '@/components/rpg/CompanionWidget';
 import { useUIMode } from '@/hooks/useUIMode';
+import { getSpecies, companionStateFromHP } from '@/lib/rpg/character';
 import { GuidedTour } from '@/components/rpg/GuidedTour';
 import { hpFinanceiro, hpStatus } from '@/lib/xp';
 import { useStore } from '@/store/useStore';
@@ -63,7 +64,7 @@ function SkeletonHero() {
 
 export function Dashboard() {
   const profile = useStore((s) => s.profile);
-  const { isRPG } = useUIMode();
+  const { isRPG, isClassic } = useUIMode();
   const { data: allTransactions, loading: txLoading } = useTransactions(false);
   const { data: debts } = useDebts();
   const { data: goals } = useGoals();
@@ -241,6 +242,17 @@ export function Dashboard() {
 
   const companionHP = hpFinanceiro(actualIncome || income, expenses);
 
+  const classicSpecies = getSpecies(profile?.companionSpeciesId);
+  const classicCompanionName = profile?.companionName?.trim() || classicSpecies?.suggestedName || 'Zagá';
+  const classicState = companionStateFromHP(companionHP, classicCompanionName);
+  const classicCompanionLine = classicState.mood === 'worried'
+    ? `${classicCompanionName} está preocupado... o mês ficou apertado. Que tal revisar os gastos?`
+    : classicState.mood === 'critical'
+    ? `${classicCompanionName} precisa de você! Seus gastos superaram a renda. O Copiloto pode ajudar.`
+    : classicState.line;
+  const healthLabel = companionHP >= 80 ? 'Excelente' : companionHP >= 55 ? 'Boa' : companionHP >= 30 ? 'Atenção' : companionHP >= 10 ? 'Alerta' : 'Crítica';
+  const hpBarColor = companionHP >= 55 ? 'bg-primary' : companionHP >= 30 ? 'bg-gold' : companionHP >= 10 ? 'bg-amber-400' : 'bg-boss';
+
   const activeCaixinha = caixinhas.find(
     (c) => c.id === profile?.companionCaixinhaId && c.status === 'active',
   );
@@ -268,24 +280,50 @@ export function Dashboard() {
             </div>
           </>
         ) : (
-          /* Classic header */
-          <div className="rounded-2xl border bg-card p-4 space-y-3">
-            <p className="text-lg font-bold text-foreground">
-              Olá{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}! 👋
-            </p>
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-muted-foreground">Saúde Financeira</span>
-                <span className="font-bold text-foreground">{companionHP}%</span>
+          /* Classic header — mascote como parceiro financeiro */
+          <div className="rounded-2xl border bg-card p-4">
+            <div className="flex items-start gap-3">
+              <div className="h-14 w-14 rounded-xl bg-secondary border border-border flex items-center justify-center text-3xl shrink-0 select-none">
+                {classicSpecies.emoji}
               </div>
-              <div className="h-2.5 w-full rounded-full overflow-hidden bg-secondary">
-                <div
-                  className={cn(
-                    'h-full rounded-full transition-all',
-                    companionHP >= 55 ? 'bg-primary' : companionHP >= 30 ? 'bg-gold' : 'bg-boss'
-                  )}
-                  style={{ width: `${companionHP}%` }}
-                />
+              <div className="flex-1 min-w-0 space-y-2">
+                <div>
+                  <p className="font-bold text-foreground leading-tight">
+                    Olá{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}! 👋
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {classicCompanionName} é seu parceiro de poupança
+                  </p>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">Saúde Financeira</span>
+                    <span className={cn('font-bold', classicState.color)}>
+                      {companionHP}% — {healthLabel}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full rounded-full overflow-hidden bg-secondary">
+                    <div
+                      className={cn('h-full rounded-full transition-all duration-700', hpBarColor)}
+                      style={{ width: `${companionHP}%` }}
+                    />
+                  </div>
+                </div>
+                {savingsProgress !== undefined && (
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-0.5">
+                      <span className="text-muted-foreground">🎯 Meta de poupança</span>
+                      <span className="font-bold text-primary">{savingsProgress}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full overflow-hidden bg-secondary">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all duration-700"
+                        style={{ width: `${savingsProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground leading-snug">{classicCompanionLine}</p>
               </div>
             </div>
           </div>
@@ -315,7 +353,7 @@ export function Dashboard() {
               <div className="flex items-center gap-1.5">
                 <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  🏆 Ouro em Cofres
+                  {isClassic ? '🏦 Saldo em Contas' : '🏆 Ouro em Cofres'}
                 </p>
                 {accounts.length === 0 && (
                   <button
@@ -378,7 +416,7 @@ export function Dashboard() {
           {/* Fluxo do mês: Entradas / Saídas / Sobra — vocabulário RPG */}
           <div data-tour="fluxo" className="grid grid-cols-3 divide-x border-t">
             <div className="min-w-0 px-3 py-3">
-              <p className="text-[10px] font-medium text-muted-foreground mb-1">💰 Ouro Ganho</p>
+              <p className="text-[10px] font-medium text-muted-foreground mb-1">{isClassic ? '💰 Entradas' : '💰 Ouro Ganho'}</p>
               <p className="text-sm font-bold text-success tabular-nums truncate">
                 {displayedIncome > 0 ? formatBRL(displayedIncome) : '—'}
               </p>
@@ -387,7 +425,7 @@ export function Dashboard() {
               )}
             </div>
             <div className="min-w-0 px-3 py-3">
-              <p className="text-[10px] font-medium text-muted-foreground mb-1">🗡️ Ouro Gasto</p>
+              <p className="text-[10px] font-medium text-muted-foreground mb-1">{isClassic ? '💸 Saídas' : '🗡️ Ouro Gasto'}</p>
               <p className={cn(
                 'text-sm font-bold tabular-nums truncate',
                 displayedExpenses > 0 ? 'text-destructive' : 'text-muted-foreground'
@@ -523,9 +561,13 @@ export function Dashboard() {
                 to="/carteira"
                 className="flex items-center gap-3 bg-destructive/5 border-b border-destructive/20 px-5 py-3.5 hover:bg-destructive/10 transition-colors"
               >
-                <Skull className="h-4 w-4 text-destructive shrink-0" />
+                {isClassic
+                  ? <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+                  : <Skull className="h-4 w-4 text-destructive shrink-0" />}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-destructive">☠️ Boss atacou! Parcelas em atraso</p>
+                  <p className="text-sm font-semibold text-destructive">
+                    {isClassic ? '⚠️ Parcelas em atraso' : '☠️ Boss atacou! Parcelas em atraso'}
+                  </p>
                   <p className="text-xs text-destructive/70">{formatBRL(overdue)} aguardam pagamento</p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-destructive/50 shrink-0" />
@@ -538,7 +580,9 @@ export function Dashboard() {
               >
                 <CalendarCheck2 className="h-4 w-4 text-amber-600 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">⚠️ Boss ataca em breve — 7 dias</p>
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                    {isClassic ? '⚠️ Vencimento próximo — 7 dias' : '⚠️ Boss ataca em breve — 7 dias'}
+                  </p>
                   <p className="text-xs text-amber-600/70">{formatBRL(dueSoon)} em parcelas chegando</p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-amber-500/50 shrink-0" />
@@ -552,8 +596,8 @@ export function Dashboard() {
           {[
             { icon: Plus, label: 'Lançar', onClick: () => setOpenTx(true), color: 'bg-primary/10 text-primary' },
             { icon: Upload, label: 'Extrato', to: '/upload', color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400' },
-            { icon: Skull, label: 'Bosses', to: '/carteira', color: 'bg-destructive/10 text-destructive' },
-            { icon: Package, label: 'Inventário', to: '/inventario', color: 'bg-amber-500/10 text-amber-500' },
+            { icon: isClassic ? AlertTriangle : Skull, label: isClassic ? 'Dívidas' : 'Bosses', to: '/carteira', color: 'bg-destructive/10 text-destructive' },
+            { icon: Package, label: isClassic ? 'Itens' : 'Inventário', to: '/inventario', color: 'bg-amber-500/10 text-amber-500' },
           ].map((action) => {
             const content = (
               <>
@@ -586,7 +630,8 @@ export function Dashboard() {
           >
             <Bell className="h-4 w-4 text-primary shrink-0" />
             <span className="text-sm flex-1 min-w-0">
-              🏦 Hora de encher o cofre: <span className="font-semibold text-primary">{formatBRL(pendingCaixinha.plan.periodTarget)}</span>
+              {isClassic ? '💰 Guardar hoje:' : '🏦 Hora de encher o cofre:'}{' '}
+              <span className="font-semibold text-primary">{formatBRL(pendingCaixinha.plan.periodTarget)}</span>
               {' '}→ {pendingCaixinha.c.emoji} {pendingCaixinha.c.name}
               {pendingCaixinha.plan.isWeekly ? ' (semana)' : ''}
             </span>
@@ -622,7 +667,7 @@ export function Dashboard() {
         {caixinhas.filter(c => c.status !== 'completed').length > 0 && (
           <div className="rounded-3xl border bg-card overflow-hidden">
             <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b">
-              <h2 className="text-sm font-semibold">🏦 Cofres da Guilda</h2>
+              <h2 className="text-sm font-semibold">{isClassic ? '💰 Caixinhas' : '🏦 Cofres da Guilda'}</h2>
               <Link to="/caixinha" className="text-xs text-primary font-medium">
                 gerenciar →
               </Link>

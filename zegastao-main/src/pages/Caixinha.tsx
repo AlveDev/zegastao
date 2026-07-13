@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, PiggyBank, ChevronLeft, Flame, Crown, Users, Bell } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useUIMode } from '@/hooks/useUIMode';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/firebase';
 import { useCaixinhas } from '@/hooks/useCaixinhas';
@@ -70,6 +71,7 @@ function CaixinhaDetail({
   onCelebrate: () => void;
 }) {
   const { toast } = useToast();
+  const { isClassic } = useUIMode();
   const profile = useStore((s) => s.profile);
   const [depositAmount, setDepositAmount] = useState(0);
   const plan = getCaixinhaPlan(caixinha);
@@ -130,7 +132,7 @@ function CaixinhaDetail({
       } catch {
         // não-crítico
       }
-      toast('🏆 Baú completo! Missão concluída!');
+      toast(isClassic ? '🎉 Meta atingida! Parabéns!' : '🏆 Baú completo! Missão concluída!');
     } else {
       toast('Depósito registrado!');
     }
@@ -162,7 +164,7 @@ function CaixinhaDetail({
         </div>
         {streak > 1 && (
           <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-orange-100 dark:bg-orange-500/15 text-orange-600 dark:text-orange-400 px-3 py-1 text-xs font-bold">
-            <Flame className="h-3.5 w-3.5" /> {streak} dias no cofre
+            <Flame className="h-3.5 w-3.5" /> {streak} dias {isClassic ? 'guardando' : 'no cofre'}
           </span>
         )}
       </div>
@@ -174,7 +176,7 @@ function CaixinhaDetail({
         />
       </div>
       <p className="text-xs text-muted-foreground">
-        {plan.progressPct.toFixed(0)}% do baú
+        {plan.progressPct.toFixed(0)}% {isClassic ? 'da meta' : 'do baú'}
         {plan.daysRemaining > 0 && ` · ${plan.daysRemaining} dia${plan.daysRemaining !== 1 ? 's' : ''} restantes`}
       </p>
 
@@ -262,6 +264,7 @@ export function Caixinha() {
   const user = useStore((s) => s.user);
   const profile = useStore((s) => s.profile);
   const { toast } = useToast();
+  const { isClassic } = useUIMode();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [celebrating, setCelebrating] = useState(false);
@@ -296,7 +299,7 @@ export function Caixinha() {
     });
     setForm({ name: '', emoji: '✈️', target: 0, date: '', shared: false, frequency: 'daily' });
     setOpen(false);
-    toast('🏛️ Cofre criado!');
+    toast(isClassic ? '✅ Caixinha criada!' : '🏛️ Cofre criado!');
   }
 
   async function remove(id: string) {
@@ -324,15 +327,15 @@ export function Caixinha() {
       {celebrating && <Confetti />}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">🏛️ Cofres da Guilda</h2>
+          <h2 className="text-lg font-semibold">{isClassic ? '💰 Suas Caixinhas' : '🏛️ Cofres da Guilda'}</h2>
           <p className="text-xs text-muted-foreground">
-            Guarde ouro para seus objetivos. Metas maiores?{' '}
+            {isClassic ? 'Guarde dinheiro para seus objetivos. Metas maiores?' : 'Guarde ouro para seus objetivos. Metas maiores?'}{' '}
             <Link to="/financas?tab=goals" className="text-primary hover:underline">Use as Metas</Link>.
           </p>
         </div>
         {!atLimit && (
           <Button size="sm" onClick={() => setOpen(!open)}>
-            <Plus className="h-4 w-4" /> Novo Cofre
+            <Plus className="h-4 w-4" /> {isClassic ? 'Nova Caixinha' : 'Novo Cofre'}
           </Button>
         )}
       </div>
@@ -444,7 +447,7 @@ export function Caixinha() {
               </label>
             )}
             <Button onClick={save} className="w-full" disabled={!form.name || form.target <= 0 || !form.date}>
-              Criar Cofre
+              {isClassic ? 'Criar Caixinha' : 'Criar Cofre'}
             </Button>
           </CardContent>
         </Card>
@@ -453,12 +456,12 @@ export function Caixinha() {
       {caixinhas.length === 0 && partnerCaixinhas.length === 0 && !open && !atLimit && (
         <div className="rounded-2xl border border-dashed bg-card/50 p-8 text-center space-y-3">
           <PiggyBank className="h-10 w-10 mx-auto text-muted-foreground/40" />
-          <p className="font-medium">🏛️ Nenhum cofre ainda</p>
+          <p className="font-medium">{isClassic ? '💰 Nenhuma caixinha ainda' : '🏛️ Nenhum cofre ainda'}</p>
           <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-            Defina um objetivo, uma data e o Zé calcula quanto depositar por dia para encher o baú.
+            Defina um objetivo, uma data e o Zé calcula quanto depositar por dia para {isClassic ? 'chegar na meta.' : 'encher o baú.'}
           </p>
           <Button size="sm" onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4" /> Criar Primeiro Cofre
+            <Plus className="h-4 w-4" /> {isClassic ? 'Criar Primeira Caixinha' : 'Criar Primeiro Cofre'}
           </Button>
         </div>
       )}
@@ -472,7 +475,7 @@ export function Caixinha() {
       {partnerCaixinhas.length > 0 && (
         <>
           <h3 className="text-sm font-semibold text-muted-foreground pt-2 flex items-center gap-2">
-            <Users className="h-4 w-4" /> Cofres da Guilda do Casal
+            <Users className="h-4 w-4" /> {isClassic ? 'Caixinhas do Casal' : 'Cofres da Guilda do Casal'}
           </h3>
           <div className="grid gap-4 sm:grid-cols-2">
             {partnerCaixinhas.map((c) => (
@@ -488,6 +491,7 @@ export function Caixinha() {
 function CaixinhaCard({ c, onOpen, onRemove }: { c: CaixinhaType; onOpen: () => void; onRemove?: () => void }) {
   const plan = getCaixinhaPlan(c);
   const streak = getStreak(c.deposits || []);
+  const { isClassic } = useUIMode();
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={onOpen}>
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
@@ -520,7 +524,7 @@ function CaixinhaCard({ c, onOpen, onRemove }: { c: CaixinhaType; onOpen: () => 
           />
         </div>
         {c.status === 'completed' ? (
-          <p className="mt-2 text-xs font-semibold text-green-600">🏆 Baú completo!</p>
+          <p className="mt-2 text-xs font-semibold text-green-600">{isClassic ? '✅ Meta concluída!' : '🏆 Baú completo!'}</p>
         ) : (
           <p className="mt-2 text-xs text-muted-foreground">
             {plan.isWeekly ? 'Esta semana:' : 'Hoje:'}{' '}

@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { CharacterPanel } from '@/components/CharacterPanel';
 import { ProfessionPanel } from '@/components/ProfessionPanel';
+import { getSpecies, companionStateFromHP } from '@/lib/rpg/character';
+import { levelFromXP, xpProgressInLevel } from '@/lib/xp';
 import { FEATURES } from '@/lib/features';
 import { useTheme } from '@/hooks/useTheme';
 import { useUIMode } from '@/hooks/useUIMode';
@@ -27,6 +29,14 @@ import { cn } from '@/lib/utils';
 import { PersonalContext } from './PersonalContext';
 import { FinancialSetupWizard } from '@/components/flows/FinancialSetupWizard';
 import { WhatsAppLink } from '@/components/WhatsAppLink';
+
+const CLASSIC_LEVEL_MAP: Record<number, string> = {
+  1: 'Iniciante', 2: 'Iniciante',
+  3: 'Organizado', 4: 'Organizado',
+  5: 'Consolidado', 6: 'Consolidado',
+  7: 'Avançado', 8: 'Avançado',
+  9: 'Especialista', 10: 'Especialista',
+};
 
 function Avatar({ name }: { name?: string }) {
   const initials = name
@@ -101,7 +111,7 @@ export function Profile() {
   const [showContext, setShowContext] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const { theme, setTheme } = useTheme();
-  const { uiMode, setUIMode } = useUIMode();
+  const { uiMode, setUIMode, isClassic } = useUIMode();
   const { isLinked, loading: partnerLoading, error: partnerError, linkPartner, unlinkPartner } = useSharedFinances();
   const [partnerEmail, setPartnerEmail] = useState('');
   const [partnerName, setPartnerName] = useState<string | null>(null);
@@ -145,20 +155,90 @@ export function Profile() {
   return (
     <div className="space-y-5 max-w-lg mx-auto">
 
-      {/* Ficha do Personagem — CharacterPanel (RPG only) */}
-      {uiMode === 'rpg' && (
+      {uiMode === 'rpg' ? (
         <>
           <CharacterPanel />
-
-          {/* Profissões */}
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">⚔️ Profissões</p>
             <ProfessionPanel professionXP={profile?.professionXP} />
           </div>
         </>
+      ) : (
+        /* Classic Progress Panel */
+        (() => {
+          const xp = profile?.xp ?? 0;
+          const level = levelFromXP(xp);
+          const xpProgress = xpProgressInLevel(xp);
+          const classicLevel = CLASSIC_LEVEL_MAP[Math.min(10, Math.max(1, level))] ?? 'Iniciante';
+          const species = getSpecies(profile?.companionSpeciesId);
+          const companionName = profile?.companionName?.trim() || species.suggestedName;
+          const dailyStreak = profile?.dailyStreak ?? 0;
+          const completedCaixinhas = profile?.completedCaixinhasCount ?? 0;
+
+          return (
+            <div className="rounded-2xl border bg-card overflow-hidden">
+              <div className="px-4 py-3 border-b flex items-center gap-3">
+                <span className="text-3xl">{species.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-foreground">{companionName}</p>
+                  <p className="text-xs text-muted-foreground">Seu parceiro de poupança</p>
+                </div>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <span className="text-muted-foreground font-medium">Nível de organização</span>
+                    <span className="font-bold text-foreground">{classicLevel} · Nível {level}</span>
+                  </div>
+                  <div className="h-2.5 w-full rounded-full overflow-hidden bg-secondary">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-700"
+                      style={{ width: `${xpProgress.pct}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {xpProgress.current.toLocaleString('pt-BR')} / {xpProgress.needed.toLocaleString('pt-BR')} pontos para o próximo nível
+                  </p>
+                </div>
+
+                {dailyStreak > 0 && (
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 shrink-0">
+                      <span className="text-base">🔥</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">{dailyStreak} dia{dailyStreak !== 1 ? 's' : ''} seguidos</p>
+                      <p className="text-xs text-muted-foreground">Sequência de acompanhamento</p>
+                    </div>
+                  </div>
+                )}
+
+                {completedCaixinhas > 0 && (
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-500/15 shrink-0">
+                      <span className="text-base">🎯</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">
+                        {completedCaixinhas} {completedCaixinhas === 1 ? 'meta concluída' : 'metas concluídas'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Guardou e chegou lá!</p>
+                    </div>
+                  </div>
+                )}
+
+                {dailyStreak === 0 && completedCaixinhas === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-1">
+                    Comece a registrar suas finanças para construir sua sequência 🚀
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })()
       )}
 
-      {/* Inventário link */}
+      {/* Inventário / Patrimônio link */}
       <Link
         to="/inventario"
         className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-950/10 px-4 py-3.5 hover:bg-amber-950/20 transition-colors"
@@ -167,8 +247,12 @@ export function Profile() {
           <Package className="h-4 w-4 text-amber-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-amber-300">📦 Inventário</p>
-          <p className="text-xs text-muted-foreground">Seus itens → Missões de venda</p>
+          <p className="text-sm font-semibold text-amber-300">
+            {isClassic ? '💼 Patrimônio' : '📦 Inventário'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {isClassic ? 'Seus bens e itens de valor' : 'Seus itens → Missões de venda'}
+          </p>
         </div>
         <ChevronRight className="h-4 w-4 text-amber-500/60 shrink-0" />
       </Link>
@@ -179,7 +263,7 @@ export function Profile() {
       {/* Resumo financeiro */}
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status do reino</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{isClassic ? 'Situação financeira' : 'Status do reino'}</p>
           <button
             onClick={() => setShowWizard(true)}
             className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
@@ -188,14 +272,14 @@ export function Profile() {
           </button>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <StatPill label="Ouro/mês" value={income > 0 ? formatBRL(income) : '—'} color="text-success" />
+          <StatPill label={isClassic ? 'Renda/mês' : 'Ouro/mês'} value={income > 0 ? formatBRL(income) : '—'} color="text-success" />
           <StatPill
-            label="Bosses"
+            label={isClassic ? 'Dívidas' : 'Bosses'}
             value={activeDebts.length === 0 ? '🎉 Nenhum' : `${activeDebts.length} ativo${activeDebts.length > 1 ? 's' : ''}`}
             color={activeDebts.length === 0 ? 'text-success' : 'text-destructive'}
           />
           <StatPill
-            label="Missões"
+            label={isClassic ? 'Objetivos' : 'Missões'}
             value={activeGoals.length === 0 ? '—' : `${activeGoals.length} ativa${activeGoals.length > 1 ? 's' : ''}`}
             color="text-primary"
           />
@@ -224,25 +308,25 @@ export function Profile() {
       {/* Persona & Contexto */}
       <div className="rounded-2xl border bg-card overflow-hidden">
         <div className="px-4 py-3 border-b">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">🧙 Habilidades do Aventureiro</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{isClassic ? '💼 Minhas Habilidades' : '🧙 Habilidades do Aventureiro'}</p>
         </div>
         <div className="divide-y">
           <MenuRow
             icon={Brain}
-            label="Persona & Habilidades"
-            sub="Seus poderes, sentimentos e análises do Sábio"
+            label={isClassic ? 'Perfil & Habilidades' : 'Persona & Habilidades'}
+            sub={isClassic ? 'Suas habilidades e análises do Copiloto' : 'Seus poderes, sentimentos e análises do Sábio'}
             onClick={() => setShowContext(true)}
           />
           <MenuRow
             icon={Zap}
-            label="Missões de Renda Extra"
-            sub="Bounties personalizadas para suas habilidades"
+            label={isClassic ? 'Renda Extra' : 'Missões de Renda Extra'}
+            sub={isClassic ? 'Oportunidades de renda extra sob medida' : 'Bounties personalizadas para suas habilidades'}
             onClick={() => setShowContext(true)}
           />
           <MenuRow
             icon={Trophy}
-            label="Quest Log"
-            sub="Conquistas e missões principais"
+            label={isClassic ? 'Metas e Conquistas' : 'Quest Log'}
+            sub={isClassic ? 'Suas conquistas e objetivos' : 'Conquistas e missões principais'}
             to="/journey"
           />
         </div>
